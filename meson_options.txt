@@ -1,0 +1,5 @@
+option('asio_include_dir', type : 'string', value : '/usr/include', description : 'the include dir of asio')
+option('catch2_include_dir', type : 'string', value : '/usr/include', description : 'the include dir of catch2')
+option('cli11_include_dir', type : 'string', value : '/opt/cpp_include', description : 'the dir containing CLI11.hpp')
+option('fmt_include_dir', type : 'string', value : '/usr/include', description : 'the include dir of fmt')
+option('spdlog_include_dir', type : 'string', value : '/usr/include', description : 'the include dir of spdlog')
