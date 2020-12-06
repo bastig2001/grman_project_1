@@ -2,11 +2,29 @@
 
 #include <string>
 
-struct Message { 
+enum class MessageType {
+    NoMessage,
+    LogMessage
 };
 
-struct LogMessage {
+class Message {
+private:
+    MessageType type;
     std::string content;
 
-    LogMessage(std::string content): content{content} {}
+public:
+    Message(
+        MessageType type = MessageType::NoMessage, 
+        std::string content = ""
+    ): type{type}, 
+       content{content} 
+    {}
+
+    MessageType get_type() {
+        return type;
+    }
+
+    std::string get_content() {
+        return content;
+    }
 };
