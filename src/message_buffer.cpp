@@ -9,7 +9,7 @@ void MessageBuffer::assign(Message message) {
     unique_lock<mutex> lck{mtx};
     message_assignable.wait(lck, [this](){ return !message_assigned; });
 
-    this->message = message;
+    this->message = move(message);
     message_assigned = true;
     message_takable.notify_one();
 }
@@ -20,7 +20,7 @@ Message MessageBuffer::take() {
 
     message_assigned = false;
     message_assignable.notify_one();
-    return message;
+    return move(message);
 }
 
 
@@ -73,8 +73,8 @@ TEST_CASE(
 
         auto taken_message = buffer.take();
 
-        CHECK(taken_message.get_type() == MessageType::LogMessage);
-        CHECK(taken_message.get_content() == "buffer test message");
+        CHECK(taken_message.type() == MessageType::LogMessage);
+        CHECK(taken_message.content() == "buffer test message");
     }
 }
 

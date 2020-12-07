@@ -2,29 +2,34 @@
 
 #include <string>
 
+// The possible Types of Messages a Message-Object can represent.
 enum class MessageType {
     NoMessage,
     LogMessage
 };
 
+// A Message, meant to represent Information for Communication between Workers.
 class Message {
-private:
-    MessageType type;
-    std::string content;
+  private:
+    MessageType _type;
+    std::string _content;
 
-public:
+  public:
     Message(
         MessageType type = MessageType::NoMessage, 
         std::string content = ""
-    ): type{type}, 
-       content{content} 
+    ): _type{type}, 
+       _content{content} 
     {}
 
-    MessageType get_type() {
-        return type;
+    // The Type which is represented.
+    MessageType type() {
+        return _type;
     }
 
-    std::string get_content() {
-        return content;
+    // The optional content of the Message.
+    // Tts use is dependent on the Type.
+    std::string content() {
+        return _content;
     }
 };
