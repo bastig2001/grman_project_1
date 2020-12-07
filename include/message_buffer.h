@@ -8,12 +8,12 @@
 class MessageBuffer {
 private:
     Message message;
-    bool message_set{false};
+    bool message_assigned{false};
     std::mutex mtx;
     std::condition_variable message_takable;
     std::condition_variable message_assignable;
 
 public:
-    void push(Message message);
-    Message pop();
+    void assign(Message message);
+    Message take();
 };

@@ -5,20 +5,20 @@
 using namespace std;
 
 
-void MessageBuffer::push(Message message) {
+void MessageBuffer::assign(Message message) {
     unique_lock<mutex> lck{mtx};
-    message_assignable.wait(lck, [this](){ return !message_set; });
+    message_assignable.wait(lck, [this](){ return !message_assigned; });
 
     this->message = message;
-    message_set = true;
+    message_assigned = true;
     message_takable.notify_one();
 }
 
-Message MessageBuffer::pop() {
+Message MessageBuffer::take() {
     unique_lock<mutex> lck{mtx};
-    message_takable.wait(lck, [this](){ return message_set; });
+    message_takable.wait(lck, [this](){ return message_assigned; });
 
-    message_set = false;
+    message_assigned = false;
     message_assignable.notify_one();
     return message;
 }
@@ -34,47 +34,47 @@ TEST_CASE(
 ) {
     auto buffer = MessageBuffer();
     
-    SECTION("messages can't be pushed twice without them beeing popped first") {
-        buffer.push(Message());
-        bool message_popped{false};
+    SECTION("messages can't be assigned twice without them beeing taken first") {
+        buffer.assign(Message());
+        bool message_taken{false};
 
         thread t{[&](){
             this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.pop();
-            message_popped = true;
+            buffer.take();
+            message_taken = true;
         }};
 
-        buffer.push(Message());
+        buffer.assign(Message());
 
-        CHECK(message_popped);
+        CHECK(message_taken);
 
         t.join();
-        buffer.pop();
+        buffer.take();
     }
 
-    SECTION("messages can't be popped before they haven't been pushed first") {
-        bool message_pushed{false};
+    SECTION("messages can't be taken before they haven't been assigned first") {
+        bool message_assigned{false};
 
         thread t{[&](){
             this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.push(Message());
-            message_pushed = true;
+            buffer.assign(Message());
+            message_assigned = true;
         }};
 
-        buffer.pop();
+        buffer.take();
 
-        CHECK(message_pushed);
+        CHECK(message_assigned);
 
         t.join();
     }
 
-    SECTION("messages don't change; pushed message == popped message") {
-        buffer.push(Message(MessageType::LogMessage, "buffer test message"));
+    SECTION("messages don't change; assigned message == taken message") {
+        buffer.assign(Message(MessageType::LogMessage, "buffer test message"));
 
-        auto popped_message = buffer.pop();
+        auto taken_message = buffer.take();
 
-        CHECK(popped_message.get_type() == MessageType::LogMessage);
-        CHECK(popped_message.get_content() == "buffer test message");
+        CHECK(taken_message.get_type() == MessageType::LogMessage);
+        CHECK(taken_message.get_content() == "buffer test message");
     }
 }
 
