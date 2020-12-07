@@ -20,16 +20,25 @@ spdlog = dependency('spdlog')
 
 # Catch2: https://github.com/catchorg/Catch2
 # add_global_arguments('-I' + get_option('catch2_include_dir'), language : 'cpp')
+catch2 = dependency('catch2')
 
 # fmt: https://github.com/fmtlib/fmt
 # add_global_arguments('-I' + get_option('fmt_include_dir'), language : 'cpp')
 fmt = dependency('fmt')
 
 inc_dir = include_directories('include')
-src = ['src/main.cpp']
+
+src = ['src/message_buffer.cpp', 'src/messages.cpp']
 
 executable('ring_voting',
-           sources : src,
+           sources : ['src/main.cpp'] + src,
            include_directories : inc_dir,
            dependencies : [thread_dep, fmt, spdlog]
+          )
+
+executable('unit_tests',
+           sources : ['src/test_main.cpp'] + src,
+           include_directories : inc_dir,
+           dependencies : [thread_dep, fmt, spdlog, catch2],
+           cpp_args: '-DUNIT_TEST'
           )
