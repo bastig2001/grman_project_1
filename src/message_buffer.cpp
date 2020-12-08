@@ -69,12 +69,19 @@ TEST_CASE(
     }
 
     SECTION("messages don't change; assigned message == taken message") {
-        buffer.assign(Message(MessageType::LogMessage, "buffer test message"));
+        Message message = 
+            GENERATE(
+                Message(MessageType::LogMessage, "buffer test message"), 
+                Message(MessageType::LogMessage, "Hello, World!"),
+                Message(MessageType::NoMessage)
+            );
+
+        buffer.assign(message);
 
         auto taken_message = buffer.take();
 
-        CHECK(taken_message.type() == MessageType::LogMessage);
-        CHECK(taken_message.content() == "buffer test message");
+        CHECK(taken_message.type() == message.type());
+        CHECK(taken_message.content() == message.content());
     }
 }
 
