@@ -28,7 +28,7 @@ fmt = dependency('fmt')
 
 inc_dir = include_directories('include')
 
-src = ['src/message_buffer.cpp', 'src/messages.cpp']
+src = ['src/message_buffer.cpp', 'src/messages.cpp', 'src/worker.cpp']
 
 executable('ring_voting',
            sources : ['src/main.cpp'] + src,
