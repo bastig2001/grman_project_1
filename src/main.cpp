@@ -1,5 +1,7 @@
-#include <fmt/core.h>
+#include "ring.h"
 
 int main() {
-    fmt::print("Hello, World!\n");
+    Ring ring(5);
+    ring.start();
+    ring.stop();
 }
