@@ -22,7 +22,7 @@ vector<int> get_unique_ids(size_t number_of_ids) {
     vector<int> ids;
     ids.reserve(number_of_ids);
 
-    for (unsigned int i{1}; i < number_of_ids; i++) {
+    for (unsigned int i{0}; i < number_of_ids; i++) {
         ids[i] = i;
     }
 
@@ -34,14 +34,15 @@ void Ring::start() {
     worker_threads.reserve(workers.size());
 
     for (unsigned int i{0}; i < workers.size(); i++) {
-        worker_threads[i] = thread{ref(*workers[i])};
+        worker_threads.push_back(thread{ref(*workers[i])});
     }
 }
 
 void Ring::stop() {
-    for (thread& worker_thread : worker_threads) {
-        if (worker_thread.joinable()) {
-            worker_thread.join();
+    for (unsigned int i{0}; i < worker_threads.size(); i++) {
+        if (worker_threads[i].joinable()) {
+            workers[i]->assign_message(new Stop());
+            worker_threads[i].join();
         }
     }
 }

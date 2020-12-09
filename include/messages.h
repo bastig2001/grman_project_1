@@ -6,6 +6,7 @@
 enum class MessageType {
     NoMessage,
     LogMessage,
+    Stop
 };
 
 struct Message {
@@ -17,6 +18,8 @@ struct Message {
     T* cast() {
         return static_cast<T*>(this);
     }
+
+    operator std::string() const;
 
   protected:
     Message(MessageType type): type{type} {}
@@ -34,4 +37,8 @@ struct LogMessage: Message {
     ): Message(MessageType::LogMessage), 
        content{content} 
     {}
+};
+
+struct Stop: Message {
+    Stop(): Message(MessageType::Stop) {}
 };
