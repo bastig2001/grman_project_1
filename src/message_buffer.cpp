@@ -5,22 +5,22 @@
 using namespace std;
 
 
-void MessageBuffer::assign(Message message) {
+void MessageBuffer::assign(Message* message) {
     unique_lock<mutex> lck{mtx};
     message_assignable.wait(lck, [this](){ return !message_assigned; });
 
-    this->message = move(message);
+    this->message = message;
     message_assigned = true;
     message_takable.notify_one();
 }
 
-Message MessageBuffer::take() {
+Message* MessageBuffer::take() {
     unique_lock<mutex> lck{mtx};
     message_takable.wait(lck, [this](){ return message_assigned; });
 
     message_assigned = false;
     message_assignable.notify_one();
-    return move(message);
+    return message;
 }
 
 
@@ -35,7 +35,7 @@ TEST_CASE(
     auto buffer = MessageBuffer();
     
     SECTION("messages can't be assigned twice without them beeing taken first") {
-        buffer.assign(Message());
+        buffer.assign(new NoMessage());
         bool message_taken{false};
 
         thread t{[&](){
@@ -44,7 +44,7 @@ TEST_CASE(
             message_taken = true;
         }};
 
-        buffer.assign(Message());
+        buffer.assign(new NoMessage());
 
         CHECK(message_taken);
 
@@ -57,7 +57,7 @@ TEST_CASE(
 
         thread t{[&](){
             this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.assign(Message());
+            buffer.assign(new NoMessage());
             message_assigned = true;
         }};
 
@@ -69,19 +69,18 @@ TEST_CASE(
     }
 
     SECTION("messages don't change; assigned message == taken message") {
-        Message message = 
+        string log_msg_content = 
             GENERATE(
-                Message(MessageType::LogMessage, "buffer test message"), 
-                Message(MessageType::LogMessage, "Hello, World!"),
-                Message(MessageType::NoMessage)
+                "buffer test message",
+                "Hello, World!"
             );
 
-        buffer.assign(message);
+        buffer.assign(new LogMessage(log_msg_content));
 
         auto taken_message = buffer.take();
 
-        CHECK(taken_message.type() == message.type());
-        CHECK(taken_message.content() == message.content());
+        REQUIRE(taken_message->type == MessageType::LogMessage);
+        CHECK(taken_message->cast<LogMessage>()->content == log_msg_content);
     }
 }
 

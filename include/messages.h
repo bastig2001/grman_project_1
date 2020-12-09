@@ -5,31 +5,33 @@
 // The possible Types of Messages a Message-Object can represent.
 enum class MessageType {
     NoMessage,
-    LogMessage
+    LogMessage,
 };
 
-// A Message, meant to represent Information for Communication between Workers.
-class Message {
-  private:
-    MessageType _type;
-    std::string _content;
+struct Message {
+    const MessageType type;
 
-  public:
-    Message(
-        MessageType type = MessageType::NoMessage, 
-        std::string content = ""
-    ): _type{type}, 
-       _content{content} 
+    virtual ~Message() = default;
+
+    template<typename T>
+    T* cast() {
+        return static_cast<T*>(this);
+    }
+
+  protected:
+    Message(MessageType type): type{type} {}
+};
+
+struct NoMessage: Message {
+    NoMessage(): Message(MessageType::NoMessage) {}
+};
+
+struct LogMessage: Message {
+    const std::string content;
+
+    LogMessage(
+        std::string content
+    ): Message(MessageType::LogMessage), 
+       content{content} 
     {}
-
-    // The Type which is represented.
-    MessageType type() {
-        return _type;
-    }
-
-    // The optional content of the Message.
-    // Tts use is dependent on the Type.
-    std::string content() {
-        return _content;
-    }
 };
