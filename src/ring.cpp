@@ -2,7 +2,7 @@
 
 using namespace std;
 
-vector<int> get_unique_ids(size_t number_of_ids);
+vector<unsigned int> get_unique_ids(size_t number_of_ids);
 
 
 Ring::Ring(size_t number_of_workers) {
@@ -18,8 +18,8 @@ Ring::Ring(size_t number_of_workers) {
     }
 }
 
-vector<int> get_unique_ids(size_t number_of_ids) {
-    vector<int> ids;
+vector<unsigned int> get_unique_ids(size_t number_of_ids) {
+    vector<unsigned int> ids;
     ids.reserve(number_of_ids);
 
     for (unsigned int i{0}; i < number_of_ids; i++) {
