@@ -34,7 +34,7 @@ ContinueOperation Worker::act_upon_message(Message* message) {
 
     switch (message->type) {
         case MessageType::LogMessage:
-            spdlog::info("Worker {} says:\n{}", id, message->cast<LogMessage>()->content);
+            spdlog::info("Worker {} says:\n{}", id, message->cast_to<LogMessage>()->content);
             break;
         case MessageType::Stop:
             continue_operation = false;

@@ -80,7 +80,7 @@ TEST_CASE(
         auto taken_message = buffer.take();
 
         REQUIRE(taken_message->type == MessageType::LogMessage);
-        CHECK(taken_message->cast<LogMessage>()->content == log_msg_content);
+        CHECK(taken_message->cast_to<LogMessage>()->content == log_msg_content);
     }
 }
 
