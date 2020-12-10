@@ -13,6 +13,7 @@ class Ring {
   public:
     Ring(size_t number_of_workers);
     void start();
+    void start_election();
     void stop();
     ~Ring();
 };

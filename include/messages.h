@@ -6,7 +6,10 @@
 enum class MessageType {
     NoMessage,
     LogMessage,
-    Stop
+    Stop,
+    StartElection,
+    ElectionProposal,
+    Elected
 };
 
 // A Message, meant to represent Information for Communication between Workers.
@@ -49,4 +52,27 @@ struct LogMessage: Message {
 // The Signal to stop
 struct Stop: Message {
     Stop(): Message(MessageType::Stop) {}
+};
+
+// The Signal to start a new election
+struct StartElection: Message {
+    StartElection(): Message(MessageType::StartElection) {}
+};
+
+// A proposal for the election containing the id of the proposed leader.
+struct ElectionProposal: Message {
+    const unsigned int id;
+
+    ElectionProposal(
+        unsigned int id
+    ): Message(MessageType::ElectionProposal), 
+       id{id} 
+    {}
+};
+
+// A message containing the id of the newly elected leader.
+struct Elected: Message {
+    const unsigned int id;
+
+    Elected(unsigned int id): Message(MessageType::Elected), id{id} {}
 };

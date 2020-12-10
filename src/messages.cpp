@@ -11,6 +11,12 @@ Message::operator string() const {
             return "No Message";
         case MessageType::Stop:
             return "Stop";
+        case MessageType::StartElection:
+            return "Start Election";
+        case MessageType::ElectionProposal:
+            return "Election Propsal";
+        case MessageType::Elected:
+            return "Elected Message";
         default:
             return "Non-Specified Message";
     }

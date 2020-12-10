@@ -38,6 +38,12 @@ void Ring::start() {
     }
 }
 
+void Ring::start_election() {
+    if (worker_threads.size() > 0) {
+        workers[0]->assign_message(new StartElection());
+    }
+}
+
 void Ring::stop() {
     for (unsigned int i{0}; i < worker_threads.size(); i++) {
         if (worker_threads[i].joinable()) {
@@ -45,6 +51,8 @@ void Ring::stop() {
             worker_threads[i].join();
         }
     }
+
+    worker_threads.clear();
 }
 
 Ring::~Ring() {
