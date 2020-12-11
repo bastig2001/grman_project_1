@@ -8,7 +8,6 @@ class Worker {
   private:
     unsigned int id;
     Worker* neighbour;
-    Worker* current_neighbour{nullptr};
     MessageBuffer message_buffer;
     bool is_leader{false};
     bool participates_in_election{false};

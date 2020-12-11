@@ -2,6 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #include <chrono>
+#include <stdexcept>
 #include <thread>
 
 using namespace std;
@@ -12,13 +13,16 @@ void Worker::assign_message(Message* message) {
 }
 
 void Worker::set_neighbour(Worker* neighbour) {
-    this->neighbour = neighbour;
+    if (neighbour) {
+        this->neighbour = neighbour;
+    }
+    else {
+        throw invalid_argument("Neighbour must point to a valid Worker object.");
+    }
 }
 
 void Worker::operator()() {
-    current_neighbour = neighbour;
-    if (current_neighbour) {
-
+    if (neighbour) {
         bool continue_operation{true};
         while (continue_operation) {
             continue_operation = act_upon_message(message_buffer.take());
@@ -84,14 +88,14 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 void Worker::forward_election_proposal(ElectionProposal* proposal) {
     spdlog::info("Worker {} particpates in the election and forwards {}", id, proposal->id);
     participates_in_election = true;
-    current_neighbour->assign_message(new ElectionProposal(proposal->id));
+    neighbour->assign_message(new ElectionProposal(proposal->id));
 }
 
 void Worker::be_elected() {
     spdlog::info("Worker {} has been elected.", id);
     participates_in_election = false;
     is_leader = true;
-    current_neighbour->assign_message(new Elected(id));
+    neighbour->assign_message(new Elected(id));
 }
 
 void Worker::discard_election_proposal(ElectionProposal* proposal) {
@@ -101,7 +105,7 @@ void Worker::discard_election_proposal(ElectionProposal* proposal) {
 void Worker::propose_oneself() {
     spdlog::info("Worker {} proposes itself as leader.", id);
     participates_in_election = true;
-    current_neighbour->assign_message(new ElectionProposal(id));
+    neighbour->assign_message(new ElectionProposal(id));
 }
 
 void Worker::end_election(Elected* elected) {
@@ -110,6 +114,6 @@ void Worker::end_election(Elected* elected) {
     }
     else {
         participates_in_election = false;
-        current_neighbour->assign_message(new Elected(elected->id));
+        neighbour->assign_message(new Elected(elected->id));
     }
 }
