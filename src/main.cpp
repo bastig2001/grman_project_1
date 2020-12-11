@@ -10,6 +10,6 @@ int main() {
     Ring ring(5);
     ring.start();
     ring.start_election();
-    this_thread::sleep_for(chrono::seconds(10));
+    this_thread::sleep_for(chrono::seconds(5));
     ring.stop();
 }

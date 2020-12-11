@@ -21,8 +21,8 @@ void Worker::operator()() {
 
         bool continue_operation{true};
         while (continue_operation) {
-            this_thread::sleep_for(chrono::milliseconds(500));
             continue_operation = act_upon_message(message_buffer.take());
+            this_thread::sleep_for(chrono::milliseconds(500));
         }
     }
 }
