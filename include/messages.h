@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <fmt/core.h>
 
 // The possible Types of Messages a Message-Object can represent.
 enum class MessageType {
@@ -18,8 +19,6 @@ struct Message {
     // The Type of the Message object
     const MessageType type;
 
-    virtual ~Message() = default;
-
     // An easier form of static casting for Message objects.
     // Meant to be used to cast to the appropriate Subclass annotated by 'type'.
     template<typename T>
@@ -27,7 +26,11 @@ struct Message {
         return static_cast<T*>(this);
     }
 
-    explicit operator std::string() const;
+    virtual explicit operator std::string() const {
+        return "Non-Specified Message";
+    }
+
+    virtual ~Message() = default;
 
   protected:
     Message(MessageType type): type{type} {}
@@ -36,6 +39,10 @@ struct Message {
 // A Message meant to represent nothing.
 struct NoMessage: Message {
     NoMessage(): Message(MessageType::NoMessage) {}
+
+    explicit operator std::string() const {
+        return "No Message";
+    }
 };
 
 // A Message which holds content for log/output.
@@ -47,16 +54,28 @@ struct LogMessage: Message {
     ): Message(MessageType::LogMessage), 
        content{content} 
     {}
+
+    explicit operator std::string() const {
+        return fmt::format("Log Message containing '{}'", content);
+    }
 };
 
 // The Signal to stop
 struct Stop: Message {
     Stop(): Message(MessageType::Stop) {}
+
+    explicit operator std::string() const {
+        return "Stop";
+    }
 };
 
 // The Signal to start a new election
 struct StartElection: Message {
     StartElection(): Message(MessageType::StartElection) {}
+
+    explicit operator std::string() const {
+        return "Start Election";
+    }
 };
 
 // A proposal for the election containing the id of the proposed leader.
@@ -68,6 +87,10 @@ struct ElectionProposal: Message {
     ): Message(MessageType::ElectionProposal), 
        id{id} 
     {}
+
+    explicit operator std::string() const {
+        return fmt::format("Election Propsal for {}", id);
+    }
 };
 
 // A message containing the id of the newly elected leader.
@@ -75,4 +98,8 @@ struct Elected: Message {
     const unsigned int id;
 
     Elected(unsigned int id): Message(MessageType::Elected), id{id} {}
+
+    explicit operator std::string() const {
+        return fmt::format("Worker {} has been elected", id);
+    }
 };
