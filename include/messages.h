@@ -1,35 +1,105 @@
 #pragma once
 
 #include <string>
+#include <fmt/core.h>
 
 // The possible Types of Messages a Message-Object can represent.
 enum class MessageType {
     NoMessage,
-    LogMessage
+    LogMessage,
+    Stop,
+    StartElection,
+    ElectionProposal,
+    Elected
 };
 
 // A Message, meant to represent Information for Communication between Workers.
-class Message {
-  private:
-    MessageType _type;
-    std::string _content;
+// It is not instantiable and only meant as a common Base Class.
+struct Message {
+    // The Type of the Message object
+    const MessageType type;
 
-  public:
-    Message(
-        MessageType type = MessageType::NoMessage, 
-        std::string content = ""
-    ): _type{type}, 
-       _content{content} 
-    {}
-
-    // The Type which is represented.
-    MessageType type() {
-        return _type;
+    // An easier form of static casting for Message objects.
+    // Meant to be used to cast to the appropriate Subclass annotated by 'type'.
+    template<typename T>
+    T* cast_to() {
+        return static_cast<T*>(this);
     }
 
-    // The optional content of the Message.
-    // Tts use is dependent on the Type.
-    std::string content() {
-        return _content;
+    virtual explicit operator std::string() const {
+        return "Non-Specified Message";
+    }
+
+    virtual ~Message() = default;
+
+  protected:
+    Message(MessageType type): type{type} {}
+};
+
+// A Message meant to represent nothing.
+struct NoMessage: Message {
+    NoMessage(): Message(MessageType::NoMessage) {}
+
+    explicit operator std::string() const {
+        return "No Message";
+    }
+};
+
+// A Message which holds content for log/output.
+struct LogMessage: Message {
+    const std::string content;
+
+    LogMessage(
+        std::string content
+    ): Message(MessageType::LogMessage), 
+       content{content} 
+    {}
+
+    explicit operator std::string() const {
+        return fmt::format("Log Message containing '{}'", content);
+    }
+};
+
+// The Signal to stop
+struct Stop: Message {
+    Stop(): Message(MessageType::Stop) {}
+
+    explicit operator std::string() const {
+        return "Stop";
+    }
+};
+
+// The Signal to start a new election
+struct StartElection: Message {
+    StartElection(): Message(MessageType::StartElection) {}
+
+    explicit operator std::string() const {
+        return "Start Election";
+    }
+};
+
+// A proposal for the election containing the id of the proposed leader.
+struct ElectionProposal: Message {
+    const unsigned int id;
+
+    ElectionProposal(
+        unsigned int id
+    ): Message(MessageType::ElectionProposal), 
+       id{id} 
+    {}
+
+    explicit operator std::string() const {
+        return fmt::format("Election Propsal for {}", id);
+    }
+};
+
+// A message containing the id of the newly elected leader.
+struct Elected: Message {
+    const unsigned int id;
+
+    Elected(unsigned int id): Message(MessageType::Elected), id{id} {}
+
+    explicit operator std::string() const {
+        return fmt::format("Worker {} has been elected", id);
     }
 };
