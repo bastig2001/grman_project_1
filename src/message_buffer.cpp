@@ -32,7 +32,7 @@ TEST_CASE(
     "Message Buffer controls and secures access to its contained Message", 
     "[message_buffer][messages]"
 ) {
-    auto buffer = MessageBuffer();
+    auto buffer{MessageBuffer()};
     
     SECTION("messages can't be assigned twice without them beeing taken first") {
         buffer.assign(new NoMessage());
@@ -69,15 +69,16 @@ TEST_CASE(
     }
 
     SECTION("messages don't change; assigned message == taken message") {
-        string log_msg_content = 
+        string log_msg_content{ 
             GENERATE(
                 "buffer test message",
                 "Hello, World!"
-            );
+            )
+        };
 
         buffer.assign(new LogMessage(log_msg_content));
 
-        auto taken_message = buffer.take();
+        auto taken_message{buffer.take()};
 
         REQUIRE(taken_message->type == MessageType::LogMessage);
         CHECK(taken_message->cast_to<LogMessage>()->content == log_msg_content);

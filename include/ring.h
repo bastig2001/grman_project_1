@@ -7,8 +7,8 @@
 
 class Ring {
   private:
-    std::vector<Worker*> workers;
-    std::vector<std::thread> worker_threads;
+    std::vector<Worker*> workers{};
+    std::vector<std::thread> worker_threads{};
 
   public:
     Ring(size_t number_of_workers);
