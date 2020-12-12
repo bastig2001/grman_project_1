@@ -1,7 +1,7 @@
 #include "ring.h"
 
 #include <set>
-#include <spdlog/spdlog.h>
+#include <random>
 
 using namespace std;
 
@@ -22,14 +22,26 @@ Ring::Ring(size_t number_of_workers) {
 }
 
 vector<unsigned int> get_unique_ids(size_t number_of_ids) {
-    vector<unsigned int> ids;
-    ids.reserve(number_of_ids);
+    unsigned int max_id{
+        number_of_ids < 100 
+            ? 999 
+            : (unsigned int)number_of_ids * 10
+    };
+    set<unsigned int> ids{};
+    random_device rd{};
+    mt19937 gen{rd()};
+    uniform_int_distribution<unsigned int> dis{0, max_id};
 
-    for (unsigned int i{0}; i < number_of_ids; i++) {
-        ids.push_back(i);
+    unsigned int i{0};
+    while (i < number_of_ids) {
+        bool was_inserted{ids.insert(dis(gen)).second};
+
+        if (was_inserted) {
+            i++;
+        }
     }
 
-    return ids;
+    return vector<unsigned int>{ids.begin(), ids.end()};
 }
 
 void Ring::start() {
