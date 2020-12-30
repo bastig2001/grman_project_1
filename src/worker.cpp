@@ -99,7 +99,7 @@ void Worker::be_elected() {
 }
 
 void Worker::discard_election_proposal(ElectionProposal* proposal) {
-    spdlog::info("Worker {} discards the election proposal for {}", proposal->id);
+    spdlog::info("Worker {} discards the election proposal for {}", id, proposal->id);
 }
 
 void Worker::propose_oneself() {
