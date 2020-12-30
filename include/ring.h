@@ -12,7 +12,7 @@ class Ring {
     std::vector<std::thread> worker_threads{};
 
   public:
-    Ring(size_t number_of_workers);
+    Ring(size_t number_of_workers, unsigned int worker_sleeptime);
     ~Ring();
 
     // Starts all Workers in separate threads.

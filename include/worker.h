@@ -2,6 +2,8 @@
 
 #include "message_buffer.h"
 
+#include <chrono>
+
 // The return type for act_upon_message.
 // Represents the decision if the loop in operator() should continue, 
 //                      or if it should finish.
@@ -15,6 +17,7 @@ class Worker {
     MessageBuffer message_buffer;
     bool is_leader{false};
     bool participates_in_election{false};
+    std::chrono::milliseconds sleeptime;
 
     ContinueOperation act_upon_message(Message* message);
     void start_election();
@@ -26,8 +29,22 @@ class Worker {
     void end_election(Elected* elected);
 
   public:
-    Worker(unsigned int id, Worker* neighbour): id{id}, neighbour{neighbour} {}
-    Worker(unsigned int id): id{id}, neighbour{nullptr} {}
+    Worker(
+        unsigned int id, 
+        unsigned int sleeptime, 
+        Worker* neighbour
+    ): id{id}, 
+       neighbour{neighbour},
+       sleeptime{sleeptime}   
+    {}
+
+    Worker(
+        unsigned int id, 
+        unsigned int sleeptime
+    ): id{id}, 
+       neighbour{nullptr},
+       sleeptime{sleeptime}
+    {}
 
     // Assigns a Message to the Worker's Message Buffer for execution,
     void assign_message(Message* message);

@@ -14,7 +14,8 @@ int main(int argc, char* argv[]) {
 
     size_t number_of_workers{};
     unsigned int number_of_elections{0};
-    chrono::milliseconds after_election_sleeptime{5000};
+    unsigned int after_election_sleeptime{5000};
+    unsigned int worker_sleeptime{500};
 
     app.add_option(
         "number-of-workers", 
@@ -25,28 +26,35 @@ int main(int argc, char* argv[]) {
         "-n, --number-of-elections",
         number_of_elections,
         "Number of Elections after which to finish\n"
-        "Default is infinit."
+        "Default 0 is infinit"
     );
     app.add_option(
         "--sleep",
         after_election_sleeptime,
         "Sleeptime after each Election in milliseconds\n"
-        "Default is a sleeptime of 5 seconds."
+        "Default is a sleeptime of 5 seconds"
+    );
+    app.add_option(
+        "--worker-sleep",
+        worker_sleeptime,
+        "Sleeptime of each worker after a finishing an operation in milliseconds\n"
+        "Default is a sleeptime of 500 milliseconds"
     );
 
     CLI11_PARSE(app, argc, argv);
 
-    Ring ring(number_of_workers);
+    Ring ring(number_of_workers, worker_sleeptime);
     ring.start();
     
+    chrono::milliseconds sleeptime{after_election_sleeptime};
     if (number_of_elections > 0) {
         for (unsigned int i{0}; i < number_of_elections; i++) {
-            cycle(ring, after_election_sleeptime);
+            cycle(ring, sleeptime);
         }
     }
     else {
         while (true) {
-            cycle(ring, after_election_sleeptime);
+            cycle(ring, sleeptime);
         }
     }
 
