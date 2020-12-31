@@ -32,7 +32,9 @@ src = [
     'src/message_buffer.cpp', 
     'src/messages.cpp', 
     'src/worker.cpp', 
-    'src/ring.cpp'
+    'src/ring.cpp',
+    'src/presenters/logger.cpp',
+    'src/presenters/console_writer.cpp'
 ]
 
 executable('ring_voting',
