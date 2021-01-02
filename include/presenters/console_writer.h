@@ -2,13 +2,15 @@
 
 #include "presenters/logger.h"
 
-class ConsoleWriter: Logger {
+class ConsoleWriter: public Logger {
   public:
     ConsoleWriter(
         spdlog::logger logger, 
         bool is_file_logger
     ): Logger(logger, is_file_logger)
     {}
+
+    ~ConsoleWriter();
 
     void ring_started() override;
     void ring_stopped() override;

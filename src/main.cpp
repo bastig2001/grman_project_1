@@ -1,6 +1,9 @@
 #include "ring.h"
+#include "presenters/console_writer.h"
 
 #include "CLI11.hpp"
+#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 #include <thread>
 #include <chrono>
 
@@ -43,7 +46,12 @@ int main(int argc, char* argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    Ring ring(number_of_workers, worker_sleeptime);
+    auto logger = spdlog::logger("logger");
+    logger.set_pattern("");
+    logger.set_pattern(".."); // compile the pattern
+    ConsoleWriter console_writer(logger, false);
+
+    Ring ring(number_of_workers, worker_sleeptime, &console_writer);
     ring.start();
     
     chrono::milliseconds sleeptime{after_election_sleeptime};

@@ -1,4 +1,5 @@
 #include "ring.h"
+#include "presenters/no_presenter.h"
 
 #include <set>
 #include <random>
@@ -8,21 +9,32 @@ using namespace std;
 vector<unsigned int> get_unique_ids(size_t number_of_ids);
 
 
-Ring::Ring(size_t number_of_workers, unsigned int worker_sleeptime) {
+Ring::Ring(
+    size_t number_of_workers, 
+    unsigned int worker_sleeptime, 
+    Presenter* presenter
+) {
+    if (!presenter) {
+        presenter = new NoPresenter();
+    }
+    this->presenter = presenter;
+
     workers.reserve(number_of_workers);
     auto ids{get_unique_ids(number_of_workers)};
     
     if (number_of_workers > 0) {
         workers.push_back(
-            new Worker(ids[0], worker_sleeptime)
+            new Worker(ids[0], worker_sleeptime, presenter)
         );
         for (unsigned int i{1}; i < number_of_workers; i++) {
             workers.push_back(
-                new Worker(ids[i], worker_sleeptime, workers[i - 1])
+                new Worker(ids[i], worker_sleeptime, presenter, workers[i - 1])
             );
         }
         workers[0]->set_neighbour(workers[number_of_workers - 1]);
     }
+
+    presenter->ring_created(number_of_workers);
 }
 
 vector<unsigned int> get_unique_ids(size_t number_of_ids) {
@@ -49,12 +61,18 @@ vector<unsigned int> get_unique_ids(size_t number_of_ids) {
 }
 
 void Ring::start() {
+    presenter->ring_starts();
+
     worker_threads.clear();
     worker_threads.reserve(workers.size());
+
+    running = true;
 
     for (unsigned int i{0}; i < workers.size(); i++) {
         worker_threads.push_back(thread{ref(*workers[i])});
     }
+
+    presenter->ring_started();
 }
 
 void Ring::start_election() {
@@ -64,6 +82,8 @@ void Ring::start_election() {
 }
 
 void Ring::stop() {
+    presenter->ring_stops();
+
     for (unsigned int i{0}; i < worker_threads.size(); i++) {
         if (worker_threads[i].joinable()) {
             workers[i]->assign_message(new Stop());
@@ -72,12 +92,25 @@ void Ring::stop() {
     }
 
     worker_threads.clear();
+
+    running = false;
+
+    presenter->ring_stopped();
 }
 
 Ring::~Ring() {
-    stop();
+    if (running) {
+        stop();
+    }
+    
     for (Worker* worker : workers) {
         delete worker;
+    }
+
+    // if the presenter is no presenter it needs to be deleted
+    NoPresenter* no_presenter{dynamic_cast<NoPresenter*>(presenter)};
+    if (no_presenter) {
+        delete no_presenter;
     }
 }
 

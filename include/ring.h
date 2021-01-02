@@ -1,6 +1,7 @@
 #pragma once
 
 #include "worker.h"
+#include "presenters/presenter.h"
 
 #include <vector>
 #include <thread>
@@ -10,9 +11,16 @@ class Ring {
   private:
     std::vector<Worker*> workers{};
     std::vector<std::thread> worker_threads{};
+    Presenter* presenter;
+    bool running{false};
 
   public:
-    Ring(size_t number_of_workers, unsigned int worker_sleeptime);
+    Ring(
+        size_t number_of_workers, 
+        unsigned int worker_sleeptime, 
+        Presenter* presenter
+    );
+
     ~Ring();
 
     // Starts all Workers in separate threads.

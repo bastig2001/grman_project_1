@@ -1,6 +1,7 @@
 #pragma once
 
 #include "message_buffer.h"
+#include "presenters/presenter.h"
 
 #include <chrono>
 
@@ -18,33 +19,32 @@ class Worker {
     bool is_leader{false};
     bool participates_in_election{false};
     std::chrono::milliseconds sleeptime;
+    Presenter* presenter;
+
+    void set_presenter(Presenter* presenter);
 
     ContinueOperation act_upon_message(Message* message);
     void start_election();
     void participate_in_election(ElectionProposal* proposal);
     void forward_election_proposal(ElectionProposal* proposal);
     void be_elected();
-    void discard_election_proposal(ElectionProposal* proposal);
     void propose_oneself();
     void end_election(Elected* elected);
 
   public:
     Worker(
         unsigned int id, 
-        unsigned int sleeptime, 
-        Worker* neighbour
+        unsigned int sleeptime,
+        Presenter* presenter,
+        Worker* neighbour = nullptr
     ): id{id}, 
        neighbour{neighbour},
        sleeptime{sleeptime}   
-    {}
+    {
+        set_presenter(presenter);
+    }
 
-    Worker(
-        unsigned int id, 
-        unsigned int sleeptime
-    ): id{id}, 
-       neighbour{nullptr},
-       sleeptime{sleeptime}
-    {}
+    ~Worker();
 
     // Assigns a Message to the Worker's Message Buffer for execution,
     void assign_message(Message* message);

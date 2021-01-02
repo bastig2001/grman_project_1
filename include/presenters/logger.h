@@ -2,7 +2,7 @@
 
 #include "presenters/presenter.h"
 
-class Logger: Presenter {
+class Logger: public Presenter {
   private:
     spdlog::logger logger;
     bool is_file_logger;
