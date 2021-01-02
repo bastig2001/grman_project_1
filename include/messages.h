@@ -40,7 +40,7 @@ struct Message {
 struct NoMessage: Message {
     NoMessage(): Message(MessageType::NoMessage) {}
 
-    explicit operator std::string() const {
+    explicit operator std::string() const override {
         return "No Message";
     }
 };
@@ -55,7 +55,7 @@ struct LogMessage: Message {
        content{content} 
     {}
 
-    explicit operator std::string() const {
+    explicit operator std::string() const override {
         return fmt::format("Log Message containing '{}'", content);
     }
 };
@@ -64,7 +64,7 @@ struct LogMessage: Message {
 struct Stop: Message {
     Stop(): Message(MessageType::Stop) {}
 
-    explicit operator std::string() const {
+    explicit operator std::string() const override {
         return "Stop";
     }
 };
@@ -73,7 +73,7 @@ struct Stop: Message {
 struct StartElection: Message {
     StartElection(): Message(MessageType::StartElection) {}
 
-    explicit operator std::string() const {
+    explicit operator std::string() const override {
         return "Start Election";
     }
 };
@@ -88,7 +88,7 @@ struct ElectionProposal: Message {
        id{id} 
     {}
 
-    explicit operator std::string() const {
+    explicit operator std::string() const override {
         return fmt::format("Election Propsal for {}", id);
     }
 };
@@ -99,7 +99,7 @@ struct Elected: Message {
 
     Elected(unsigned int id): Message(MessageType::Elected), id{id} {}
 
-    explicit operator std::string() const {
+    explicit operator std::string() const override {
         return fmt::format("Worker {} has been elected", id);
     }
 };

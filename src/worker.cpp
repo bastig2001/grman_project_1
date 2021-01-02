@@ -1,4 +1,5 @@
 #include "worker.h"
+#include "presenters/no_presenter.h"
 
 #include <spdlog/spdlog.h>
 #include <chrono>
@@ -21,24 +22,50 @@ void Worker::set_neighbour(Worker* neighbour) {
     }
 }
 
+void Worker::set_presenter(Presenter* presenter) {
+    // sets the presenter of the worker to the given presenter 
+    // when it's not a null pointer,
+    // otherwise it's set to no presenter
+    this->presenter = 
+        presenter
+        ? presenter
+        : new NoPresenter();
+}
+
+bool Worker::is_running() const {
+    return running;
+}
+
+Worker::~Worker() {
+    // if the presenter of the worker is no presenter it needs to be deleted
+    NoPresenter* no_presenter{dynamic_cast<NoPresenter*>(presenter)};
+    if (no_presenter) {
+        delete no_presenter;
+    }
+}
+
 void Worker::operator()() {
     if (neighbour) {
+        running = true;
+
         bool continue_operation{true};
         while (continue_operation) {
+            this_thread::sleep_for(sleeptime);
             continue_operation = act_upon_message(message_buffer.take());
-            this_thread::sleep_for(chrono::milliseconds(500));
         }
+
+        running = false;
     }
 }
 
 ContinueOperation Worker::act_upon_message(Message* message) {
     ContinueOperation continue_operation{true};
 
-    spdlog::info("Worker {} got following message: {}.", id, (string)*message);
+    presenter->worker_got_message(id, message);
 
     switch (message->type) {
         case MessageType::LogMessage:
-            spdlog::info("Worker {} says:\n{}", id, message->cast_to<LogMessage>()->content);
+            presenter->worker_says(id, message->cast_to<LogMessage>()->content);
             break;
         case MessageType::StartElection:
             start_election();
@@ -62,12 +89,26 @@ ContinueOperation Worker::act_upon_message(Message* message) {
 }
 
 void Worker::start_election() {
-    spdlog::info("Worker {} starts an election.", id);
+    presenter->worker_starts_election(id);
+
+    presenter->worker_participates_in_election(id);
+    participates_in_election = true;
+
     propose_oneself();
 }
 
 void Worker::participate_in_election(ElectionProposal* proposal) {
-    is_leader = false;
+    if (is_leader) {
+        presenter->worker_resigns_as_leader(id);
+        is_leader = false;
+    }
+
+    bool already_participated_in_election{participates_in_election};
+
+    if (!participates_in_election) {
+        participates_in_election = true;
+        presenter->worker_participates_in_election(id);
+    }
 
     if (proposal->id > id) {
         forward_election_proposal(proposal);
@@ -76,8 +117,8 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
         be_elected();
     }
     else {
-        if (participates_in_election) {
-            discard_election_proposal(proposal);
+        if (already_participated_in_election) {
+            presenter->worker_discards_election_proposal(id, proposal->id);
         }
         else {
             propose_oneself();
@@ -86,34 +127,33 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 }
 
 void Worker::forward_election_proposal(ElectionProposal* proposal) {
-    spdlog::info("Worker {} particpates in the election and forwards {}", id, proposal->id);
-    participates_in_election = true;
+    presenter->worker_forwards_election_proposal(id, proposal->id);
     neighbour->assign_message(new ElectionProposal(proposal->id));
 }
 
 void Worker::be_elected() {
-    spdlog::info("Worker {} has been elected.", id);
-    participates_in_election = false;
+    presenter->worker_is_elected(id);
     is_leader = true;
+
+    presenter->worker_stops_election_participation(id);
+    participates_in_election = false;
+
     neighbour->assign_message(new Elected(id));
 }
 
-void Worker::discard_election_proposal(ElectionProposal* proposal) {
-    spdlog::info("Worker {} discards the election proposal for {}", proposal->id);
-}
-
 void Worker::propose_oneself() {
-    spdlog::info("Worker {} proposes itself as leader.", id);
-    participates_in_election = true;
+    presenter->worker_proposes_itself_in_election(id);
     neighbour->assign_message(new ElectionProposal(id));
 }
 
 void Worker::end_election(Elected* elected) {
     if (elected->id == id) {
-        spdlog::info("The election is over. Worker {} is the leader.", id);
+        presenter->election_is_finished(id);
     }
     else {
+        presenter->worker_stops_election_participation(id);
         participates_in_election = false;
+
         neighbour->assign_message(new Elected(elected->id));
     }
 }

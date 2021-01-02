@@ -1,6 +1,9 @@
 #pragma once
 
 #include "message_buffer.h"
+#include "presenters/presenter.h"
+
+#include <chrono>
 
 // The return type for act_upon_message.
 // Represents the decision if the loop in operator() should continue, 
@@ -15,19 +18,34 @@ class Worker {
     MessageBuffer message_buffer;
     bool is_leader{false};
     bool participates_in_election{false};
+    std::chrono::milliseconds sleeptime;
+    Presenter* presenter;
+    bool running{false};
+
+    void set_presenter(Presenter* presenter);
 
     ContinueOperation act_upon_message(Message* message);
     void start_election();
     void participate_in_election(ElectionProposal* proposal);
     void forward_election_proposal(ElectionProposal* proposal);
     void be_elected();
-    void discard_election_proposal(ElectionProposal* proposal);
     void propose_oneself();
     void end_election(Elected* elected);
 
   public:
-    Worker(unsigned int id, Worker* neighbour): id{id}, neighbour{neighbour} {}
-    Worker(unsigned int id): id{id}, neighbour{nullptr} {}
+    Worker(
+        unsigned int id, 
+        unsigned int sleeptime,
+        Presenter* presenter,
+        Worker* neighbour = nullptr
+    ): id{id}, 
+       neighbour{neighbour},
+       sleeptime{sleeptime}   
+    {
+        set_presenter(presenter);
+    }
+
+    ~Worker();
 
     // Assigns a Message to the Worker's Message Buffer for execution,
     void assign_message(Message* message);
@@ -39,4 +57,7 @@ class Worker {
     // Sets the neighbour of the Worker to the given pointer.
     // Throws invalid_argument when the argument is a null pointer.
     void set_neighbour(Worker* neighbour);
+
+    // if the worker is in the method operator()
+    bool is_running() const;
 };

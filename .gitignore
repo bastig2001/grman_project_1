@@ -40,3 +40,5 @@
 devel/
 build/
 builddir/
+
+*.log
