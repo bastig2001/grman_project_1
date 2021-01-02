@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
     unsigned int worker_sleeptime{500};
     bool logging_enabled{false};
     string log_file_name{""};
+    bool log_date{false};
     spdlog::level::level_enum logging_level{spdlog::level::off};
 
     CLI::App app("Simulate a Ring with Elections using the Chang and Roberts algorithm");
@@ -60,6 +61,11 @@ int main(int argc, char* argv[]) {
         log_file_name,
         "Sets the file as log output and enables logging"
     );
+    app.add_flag(
+        "--log-date",
+        log_date,
+        "Logs the date additionally to the time, when logging to a file"
+    );
     app.add_option(
         "--log-level",
         logging_level,
@@ -84,7 +90,13 @@ int main(int argc, char* argv[]) {
     if (is_file_logger) {
         logger = spdlog::basic_logger_mt("logger", log_file_name);
         write_log_start(logger);
-        logger->set_pattern("[%T.%e] [%l] %v");
+
+        string date_pattern{
+            log_date
+            ? "%Y-%m-%d "
+            : ""
+        };
+        logger->set_pattern("[" + date_pattern + "%T.%e] [%l] %v");
     }
     else {
         logger = spdlog::stdout_logger_mt("logger");
