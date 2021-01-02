@@ -9,11 +9,13 @@ class Presenter {
     virtual void log(spdlog::level::level_enum log_level, const std::string& message) = 0;
 
     virtual void ring_created(size_t ring_size) = 0;
-    virtual void worker_created(unsigned int worker_id, unsigned int position) = 0;
     virtual void ring_starts() = 0;
     virtual void ring_started() = 0;
     virtual void ring_stops() = 0;
     virtual void ring_stopped() = 0;
+
+    virtual void worker_created(unsigned int worker_id, unsigned int position) = 0;
+    virtual void worker_stopped(unsigned int worker_id, unsigned int position) = 0;
 
     virtual void worker_got_message(unsigned int worker_id, Message* message) = 0;
     virtual void worker_says(unsigned int worker_id, const std::string& message) = 0;

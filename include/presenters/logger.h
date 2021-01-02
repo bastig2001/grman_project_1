@@ -27,11 +27,13 @@ class Logger: Presenter {
     void log(spdlog::level::level_enum log_level, const std::string& message) override;
 
     virtual void ring_created(size_t ring_size) override;
-    virtual void worker_created(unsigned int worker_id, unsigned int position) override;
     virtual void ring_starts() override;
     virtual void ring_started() override;
     virtual void ring_stops() override;
     virtual void ring_stopped() override;
+
+    virtual void worker_created(unsigned int worker_id, unsigned int position) override;
+    virtual void worker_stopped(unsigned int worker_id, unsigned int position) override;
 
     virtual void worker_got_message(unsigned int worker_id, Message* message) override;
     virtual void worker_says(unsigned int worker_id, const std::string& message) override;
