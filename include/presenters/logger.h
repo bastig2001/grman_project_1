@@ -5,12 +5,12 @@
 // A Presenter that logs everything with the given logger
 class Logger: public Presenter {
   private:
-    spdlog::logger logger;
+    std::shared_ptr<spdlog::logger> logger;
     bool is_file_logger;
 
   public:
     Logger(
-        spdlog::logger logger, 
+        std::shared_ptr<spdlog::logger> logger, 
         bool is_file_logger
     ): logger{logger}, 
        is_file_logger{is_file_logger} 
@@ -22,7 +22,7 @@ class Logger: public Presenter {
 
     template<typename... Args>
     void log(spdlog::level::level_enum log_level, const Args&... args) {
-        logger.log(log_level, args...);
+        logger->log(log_level, args...);
     }
 
     void log(spdlog::level::level_enum log_level, const std::string& message) override;

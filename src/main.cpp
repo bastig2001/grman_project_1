@@ -2,8 +2,7 @@
 #include "presenters/console_writer.h"
 
 #include "CLI11.hpp"
-#include <spdlog/logger.h>
-#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_sinks.h>
 #include <thread>
 #include <chrono>
 
@@ -19,6 +18,7 @@ int main(int argc, char* argv[]) {
     unsigned int number_of_elections{0};
     unsigned int after_election_sleeptime{5000};
     unsigned int worker_sleeptime{500};
+    bool logging_enabled{false};
 
     app.add_option(
         "number-of-workers", 
@@ -43,13 +43,25 @@ int main(int argc, char* argv[]) {
         "Sleeptime of each worker after a finishing an operation in milliseconds\n"
         "Default is a sleeptime of 500 milliseconds"
     );
+    app.add_flag(
+        "--log",
+        logging_enabled,
+        "enables logging"
+    );
 
     CLI11_PARSE(app, argc, argv);
 
-    auto logger = spdlog::logger("logger");
-    logger.set_pattern("");
-    logger.set_pattern(".."); // compile the pattern
-    ConsoleWriter console_writer(logger, false);
+    auto logger = spdlog::stdout_logger_mt("logger");
+
+    if (logging_enabled) {
+        logger->set_pattern("%v");
+        logger->set_level(spdlog::level::info);
+    }
+    else {
+        logger->set_pattern("");
+    }
+
+    ConsoleWriter console_writer(move(logger), false);
 
     Ring ring(number_of_workers, worker_sleeptime, &console_writer);
     ring.start();

@@ -6,7 +6,7 @@
 class ConsoleWriter: public Logger {
   public:
     ConsoleWriter(
-        spdlog::logger logger, 
+        std::shared_ptr<spdlog::logger> logger, 
         bool is_file_logger // set to true, if the given logger logs to a file
     ): Logger(logger, is_file_logger)
     {}
