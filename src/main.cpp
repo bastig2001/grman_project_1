@@ -2,25 +2,28 @@
 #include "presenters/console_writer.h"
 
 #include "CLI11.hpp"
-#include <spdlog/common.h>
+#include <memory>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #include <thread>
 #include <chrono>
 
 using namespace std;
 
+void write_log_start(shared_ptr<spdlog::logger>& logger);
 void cycle(Ring&, chrono::milliseconds);
 
 
 int main(int argc, char* argv[]) {
-    CLI::App app("Simulate a Ring with Elections using the Chang and Roberts algorithm");
-
     size_t number_of_workers{};
     unsigned int number_of_elections{0};
     unsigned int after_election_sleeptime{5000};
     unsigned int worker_sleeptime{500};
     bool logging_enabled{false};
+    string log_file_name{""};
     spdlog::level::level_enum logging_level{spdlog::level::off};
+
+    CLI::App app("Simulate a Ring with Elections using the Chang and Roberts algorithm");
 
     app.add_option(
         "number-of-workers", 
@@ -49,7 +52,13 @@ int main(int argc, char* argv[]) {
         "--log",
         logging_enabled,
         "Enables logging\n"
-            "  Default logging level is INFO"
+            "  Default logging level is INFO\n"
+            "  Default logging output is the console"
+    );
+    app.add_option(
+        "--log-file",
+        log_file_name,
+        "Sets the file as log output and enables logging"
     );
     app.add_option(
         "--log-level",
@@ -60,7 +69,7 @@ int main(int argc, char* argv[]) {
             "  2 ... INFO\n"
             "  3 ... WARN\n"
             "  4 ... ERROR\n"
-            "  5 ... CRITICAL\n"
+            "  5 ... CRITICAL"
     );
     
     CLI11_PARSE(app, argc, argv);
@@ -69,11 +78,22 @@ int main(int argc, char* argv[]) {
         logging_level = spdlog::level::info;
     }
 
-    auto logger = spdlog::stdout_logger_mt("logger");
-    logger->set_pattern("%v");
+    shared_ptr<spdlog::logger> logger{};
+    bool is_file_logger{log_file_name != ""};
+
+    if (is_file_logger) {
+        logger = spdlog::basic_logger_mt("logger", log_file_name);
+        write_log_start(logger);
+        logger->set_pattern("[%T.%e] [%l] %v");
+    }
+    else {
+        logger = spdlog::stdout_logger_mt("logger");
+        logger->set_pattern("%v");
+    }
+    
     logger->set_level(logging_level);
 
-    ConsoleWriter console_writer(move(logger), false);
+    ConsoleWriter console_writer(move(logger), is_file_logger);
 
     Ring ring(number_of_workers, worker_sleeptime, &console_writer);
     ring.start();
@@ -91,6 +111,18 @@ int main(int argc, char* argv[]) {
     }
 
     ring.stop();
+}
+
+void write_log_start(shared_ptr<spdlog::logger>& logger) {
+    logger->set_pattern("%v");
+    logger->set_level(spdlog::level::info);
+
+    logger->info("");
+    logger->info("=========================================================");
+    logger->set_pattern("  This is a new Log starting at %Y-%m-%d %T.%e");
+    logger->info("");
+    logger->set_pattern("%v");
+    logger->info("=========================================================");
 }
 
 void cycle(Ring& ring, chrono::milliseconds sleeptime) {
