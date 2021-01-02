@@ -113,6 +113,5 @@ void ConsoleWriter::election_is_finished(unsigned int leader_id) {
 }
 
 ConsoleWriter::~ConsoleWriter() {
-    // print and flush nothing just to reset cursor colour
-    print("\n");
+    print("\n"); // print and flush nothing just to reset cursor colour
 }

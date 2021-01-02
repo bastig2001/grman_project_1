@@ -4,6 +4,8 @@
 
 #include <spdlog/spdlog.h>
 
+// The Interface for a Presenter, 
+// an object which presents to the users/outputs the called events
 class Presenter {
   public:
     virtual void log(spdlog::level::level_enum log_level, const std::string& message) = 0;

@@ -2,11 +2,12 @@
 
 #include "presenters/logger.h"
 
+// A Presenter and Logger that prints the most important events to the console
 class ConsoleWriter: public Logger {
   public:
     ConsoleWriter(
         spdlog::logger logger, 
-        bool is_file_logger
+        bool is_file_logger // set to true, if the given logger logs to a file
     ): Logger(logger, is_file_logger)
     {}
 

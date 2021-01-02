@@ -2,6 +2,7 @@
 
 #include "presenters/presenter.h"
 
+// A Presenter which doesn't do anything
 class NoPresenter: public Presenter {
   public:
     void log([[maybe_unused]] spdlog::level::level_enum log_level, [[maybe_unused]] const std::string& message) override {}

@@ -2,6 +2,7 @@
 
 #include "presenters/presenter.h"
 
+// A Presenter that logs everything with the given logger
 class Logger: public Presenter {
   private:
     spdlog::logger logger;
