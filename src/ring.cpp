@@ -85,7 +85,10 @@ void Ring::stop() {
     presenter->ring_stops();
 
     for (unsigned int i{0}; i < worker_threads.size(); i++) {
-        if (worker_threads[i].joinable()) {
+        if (worker_threads[i].joinable() 
+            && 
+            workers[i]->is_running()
+        ) {
             workers[i]->assign_message(new Stop());
             worker_threads[i].join();
         }

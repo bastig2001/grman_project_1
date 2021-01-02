@@ -20,6 +20,7 @@ class Worker {
     bool participates_in_election{false};
     std::chrono::milliseconds sleeptime;
     Presenter* presenter;
+    bool running{false};
 
     void set_presenter(Presenter* presenter);
 
@@ -56,4 +57,7 @@ class Worker {
     // Sets the neighbour of the Worker to the given pointer.
     // Throws invalid_argument when the argument is a null pointer.
     void set_neighbour(Worker* neighbour);
+
+    // if the worker is in the method operator()
+    bool is_running() const;
 };

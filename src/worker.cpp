@@ -32,6 +32,10 @@ void Worker::set_presenter(Presenter* presenter) {
         : new NoPresenter();
 }
 
+bool Worker::is_running() const {
+    return running;
+}
+
 Worker::~Worker() {
     // if the presenter of the worker is no presenter it needs to be deleted
     NoPresenter* no_presenter{dynamic_cast<NoPresenter*>(presenter)};
@@ -42,11 +46,15 @@ Worker::~Worker() {
 
 void Worker::operator()() {
     if (neighbour) {
+        running = true;
+
         bool continue_operation{true};
         while (continue_operation) {
             this_thread::sleep_for(sleeptime);
             continue_operation = act_upon_message(message_buffer.take());
         }
+
+        running = false;
     }
 }
 
