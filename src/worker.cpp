@@ -159,41 +159,138 @@ void Worker::end_election(Elected* elected) {
 }
 
 
-// #ifdef UNIT_TEST
-// #include "catch2/catch.hpp"
+#ifdef UNIT_TEST
+#include "catch2/catch.hpp"
+#include <tuple>
+#include <cmath>
 
-// TEST_CASE(
-//     "Worker interacts with its neighbour and implements the Chang and Roberts algorithm for elections", 
-//     "[worker][message_buffer][messages]"
-// ) {
-//     int* ids{GENERATE({0, 1}, {1, 0}, {2, 8}, {9, 5})};
-//     NoPresenter dummy_presenter;
-//     Worker dummy_worker(ids[0], 0, &dummy_presenter);
-//     Worker worker(ids[1], 0, &dummy_presenter, &dummy_worker);
+// sleep is needed since there is another thread
+#define sleep() this_thread::sleep_for(chrono::milliseconds(50))
+
+TEST_CASE(
+    "Worker interacts with its neighbour and implements the Chang and Roberts algorithm for elections", 
+    "[worker][message_buffer][messages]"
+) {
+    tuple<unsigned int, unsigned int> ids{GENERATE(
+        tuple<unsigned int, unsigned int>{2, 8}, 
+        tuple<unsigned int, unsigned int>{9, 5}
+    )};
+    unsigned int dummy_id{get<0>(ids)};
+    unsigned int worker_id{get<1>(ids)};
+
+    Worker dummy_worker(dummy_id, 0, nullptr);
+    Worker worker(worker_id, 0, nullptr, &dummy_worker);
+
+    thread worker_thread{ref(worker)};
+    sleep();
+
+    REQUIRE_FALSE(dummy_worker.is_running());
+    REQUIRE(worker.is_running());
     
-//     SECTION("Worker is able to start election") {
+    SECTION("Worker is able to start election") {
+        worker.assign_message(new StartElection());
+        sleep();
 
-//     }
+        CHECK(worker.participates_in_election);
 
-//     SECTION("Worker is able to participate at election") {
+        auto message{dummy_worker.message_buffer.take()};
+        REQUIRE(message->type == MessageType::ElectionProposal);
+        CHECK(message->cast_to<ElectionProposal>()->id == worker_id);
 
-//     }
+        delete message;
+    }
 
-//     SECTION("Worker can handle out of order election proposals") {
+    SECTION("Worker is able to participate in election") {
+        worker.participates_in_election = false;
+        worker.is_leader = GENERATE(true, false);
 
-//     }
+        worker.assign_message(new ElectionProposal(dummy_id));
+        sleep();
 
-//     SECTION("Worker can be elected") {
+        CHECK(worker.participates_in_election);
+        CHECK_FALSE(worker.is_leader);
 
-//     }
+        auto message{dummy_worker.message_buffer.take()};
+        REQUIRE(message->type == MessageType::ElectionProposal);
+        CHECK(message->cast_to<ElectionProposal>()->id == max(worker_id, dummy_id));
 
-//     SECTION("Worker acts accordingly when someone is elected") {
+        delete message;
+    }
 
-//     }
+    SECTION("Worker can handle out of order election proposals") {
+        worker.participates_in_election = true;
 
-//     SECTION("Worker is able to finish election") {
+        worker.assign_message(new ElectionProposal(dummy_id));
+        sleep();
 
-//     }
-// }
+        CHECK(worker.participates_in_election);
 
-// #endif
+        if (dummy_id > worker_id) {
+            auto message{dummy_worker.message_buffer.take()};
+            REQUIRE(message->type == MessageType::ElectionProposal);
+            CHECK(message->cast_to<ElectionProposal>()->id == dummy_id);
+
+            delete message;
+        }
+        else {
+            REQUIRE(dummy_worker.message_buffer.is_empty());
+        }
+    }
+
+    SECTION("Worker can be elected") {
+        worker.participates_in_election = true;
+        worker.is_leader = false;
+
+        worker.assign_message(new ElectionProposal(worker_id));
+        sleep();
+
+        CHECK_FALSE(worker.participates_in_election);
+        CHECK(worker.is_leader);
+
+        auto message{dummy_worker.message_buffer.take()};
+        REQUIRE(message->type == MessageType::Elected);
+        CHECK(message->cast_to<Elected>()->id == worker_id);
+
+        delete message;
+    }
+
+    SECTION("Worker acts accordingly when someone is elected") {
+        worker.participates_in_election = true;
+        worker.is_leader = false;
+
+        worker.assign_message(new Elected(dummy_id));
+        sleep();
+
+        CHECK_FALSE(worker.participates_in_election);
+        CHECK_FALSE(worker.is_leader);
+
+        auto message{dummy_worker.message_buffer.take()};
+        REQUIRE(message->type == MessageType::Elected);
+        CHECK(message->cast_to<Elected>()->id == dummy_id);
+
+        delete message;
+    }
+
+    SECTION("Worker is able to finish election") {
+        worker.participates_in_election = false;
+        worker.is_leader = true;
+
+        worker.assign_message(new Elected(worker_id));
+        sleep();
+
+        CHECK_FALSE(worker.participates_in_election);
+        CHECK(worker.is_leader);
+
+        CHECK(dummy_worker.message_buffer.is_empty());
+    }
+
+    worker.assign_message(new Stop());
+    sleep();
+
+    REQUIRE_FALSE(dummy_worker.is_running());
+    REQUIRE_FALSE(worker.is_running());
+
+    worker_thread.join();
+}
+
+#endif
