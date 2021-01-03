@@ -7,6 +7,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <memory>
 #include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -144,7 +145,7 @@ int get_file_config(const string& file_name, Config& config) {
     }
 
     if (config.number_of_workers == 0) {
-        cerr << "positive size is required and needs to be set in config file or as CLI argument\n"
+        cerr << "A positive size is required and needs to be set in the config file or as a CLI argument.\n"
              << "Run with --help for more information." << endl;
         return 2;
     }
@@ -167,6 +168,8 @@ shared_ptr<spdlog::logger> get_and_start_logger(const Config& config) {
     }
     
     logger->set_level(config.logging_level);
+
+    logger->debug("The configuration looks as follows:\n{}", (string)config);
 
     return logger;
 }
@@ -208,4 +211,20 @@ shared_ptr<spdlog::logger> get_console_logger() {
     logger->set_pattern("%v");
 
     return logger;
+}
+
+Config::operator string() const {
+    ostringstream output{};
+    output << boolalpha
+           << "Size:                       " << number_of_workers        << "\n"
+           << "Config File:                " << config_file              << "\n"
+           << "Number of Elections:        " << number_of_elections      << "\n"
+           << "Sleeptime:                  " << after_election_sleeptime << " ms\n"
+           << "Worker Sleeptime:           " << worker_sleeptime         << " ms\n"
+           << "Logging enabled explicitly: " << logging_enabled          << "\n"
+           << "Log File:                   " << log_file_name            << "\n"
+           << "Log Dates in File:          " << log_date                 << "\n"
+           << "Logging Level:              " << logging_level;
+    
+    return output.str();
 }

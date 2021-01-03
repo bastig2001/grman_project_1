@@ -16,6 +16,8 @@ struct Config {
     bool log_date{false};
     spdlog::level::level_enum logging_level{spdlog::level::off};
     bool is_file_logger{};
+
+    operator std::string() const;
 };
 
 // Representing if the program should exit after 'configure' because of the CLI
