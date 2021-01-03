@@ -10,8 +10,10 @@
 
 using namespace std;
 
-ConfigExit get_file_config(const string&, Config&);
+int get_file_config(const string&, Config&);
 shared_ptr<spdlog::logger> get_and_start_logger(const Config&);
+shared_ptr<spdlog::logger> get_and_start_file_logger(const Config&);
+shared_ptr<spdlog::logger> get_console_logger();
 void write_log_start(shared_ptr<spdlog::logger>&);
 
 
@@ -85,10 +87,10 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
         return (int)CLI::ExitCodes::RequiredError;
     }
     else if (config.config_file != "") {
-        ConfigExit config_exit{get_file_config(config.config_file, config)};
+        int config_exit{get_file_config(config.config_file, config)};
 
-        if (config_exit.supposed_to_exit) {
-            return config_exit.exit_code;
+        if (config_exit) {
+            return config_exit;
         }
 
         // parse the CLI arguments a second time to override the file config
@@ -107,7 +109,7 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
     return false; // Default return, program is not supposed to exit immediately
 }
 
-ConfigExit get_file_config(const string& file_name, Config& config) {
+int get_file_config(const string& file_name, Config& config) {
     try {
         auto file_config = toml::parse_file(file_name);
 
@@ -147,7 +149,7 @@ ConfigExit get_file_config(const string& file_name, Config& config) {
         return 2;
     }
 
-    return false; // Default return, no parsing issues
+    return 0; // Default return, no parsing issues
 }
 
 Presenter* get_and_start_presenter(const Config& config) {
@@ -158,7 +160,21 @@ shared_ptr<spdlog::logger> get_and_start_logger(const Config& config) {
     shared_ptr<spdlog::logger> logger{};
 
     if (config.is_file_logger) {
-        logger = spdlog::basic_logger_mt("logger", config.log_file_name);
+        logger = get_and_start_file_logger(config); 
+    }
+    else {
+        logger = get_console_logger();
+    }
+    
+    logger->set_level(config.logging_level);
+
+    return logger;
+}
+
+shared_ptr<spdlog::logger> get_and_start_file_logger(const Config& config) {
+    try {
+        auto logger{spdlog::basic_logger_mt("logger", config.log_file_name)};
+
         write_log_start(logger);
 
         string date_pattern{
@@ -167,15 +183,12 @@ shared_ptr<spdlog::logger> get_and_start_logger(const Config& config) {
             : ""
         };
         logger->set_pattern("[" + date_pattern + "%T.%e] [%l] %v");
-    }
-    else {
-        logger = spdlog::stdout_logger_mt("logger");
-        logger->set_pattern("%v");
-    }
-    
-    logger->set_level(config.logging_level);
 
-    return logger;
+        return logger;
+    } catch (const spdlog::spdlog_ex& err) {
+        cerr << "Writing the log failed:\n" << err.what() << endl;
+        exit(3);
+    }
 }
 
 void write_log_start(shared_ptr<spdlog::logger>& logger) {
@@ -187,4 +200,12 @@ void write_log_start(shared_ptr<spdlog::logger>& logger) {
     logger->info("");
     logger->set_pattern("%v");
     logger->info("=========================================================");
+}
+
+shared_ptr<spdlog::logger> get_console_logger() {
+    auto logger{spdlog::stdout_logger_mt("logger")};
+
+    logger->set_pattern("%v");
+
+    return logger;
 }
