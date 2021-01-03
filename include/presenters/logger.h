@@ -48,4 +48,6 @@ class Logger: public Presenter {
     virtual void worker_resigns_as_leader(unsigned int worker_id) override;
 
     virtual void election_is_finished(unsigned int leader_id) override;
+
+    virtual ~Logger() = default;
 };
