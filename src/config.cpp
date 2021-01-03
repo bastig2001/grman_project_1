@@ -79,6 +79,12 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
             "  4 ... ERROR\n"
             "  5 ... CRITICAL"
     );
+    app.add_flag(
+        "--no-config-log",
+        config.no_config_log,
+        "Abstain from logging the used config as a DEBUG message"
+    );
+
     
     CLI11_PARSE(app, argc, argv);
 
@@ -138,6 +144,9 @@ int get_file_config(const string& file_name, Config& config) {
         config.logging_level = (spdlog::level::level_enum)
             file_config["log"]["level"]
             .value_or((int)config.logging_level);
+        config.no_config_log =
+            file_config["log"]["no_config_log"]
+            .value_or(config.no_config_log);
     }
     catch (const toml::parse_error& err) {
         cerr << "Parsing the Toml config file failed:\n" << err << endl;
@@ -169,7 +178,9 @@ shared_ptr<spdlog::logger> get_and_start_logger(const Config& config) {
     
     logger->set_level(config.logging_level);
 
-    logger->debug("The configuration looks as follows:\n{}", (string)config);
+    if (!config.no_config_log) {
+        logger->debug("The configuration looks as follows:\n{}", (string)config);
+    }
 
     return logger;
 }

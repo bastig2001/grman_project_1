@@ -1,4 +1,5 @@
 # This is an example config file
+# All options can be also set with the CLI. Their meaning is the same
 
 [ring]
 size = 5                # needs to be set here or in the CLI
@@ -12,6 +13,7 @@ sleeptime = 1700        # in milliseconds, default is 5 seconds
 enabled = true          # not necessary when file or level set, default is false
 file = "test.log"       # default is not set/""
 include_date = false    # default is false
+no_config_log = false   # default is false
 level = 1               # default is 2
                         #   0 ... TRACE
                         #   1 ... DEBUG
