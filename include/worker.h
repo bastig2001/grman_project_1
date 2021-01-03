@@ -12,7 +12,11 @@ using ContinueOperation = bool;
 
 // A Worker as a node in the Ring.
 class Worker {
+ #ifdef UNIT_TEST 
+  public: // Needed for the unit tests to be able to examine inner workings
+ #else
   private:
+ #endif
     unsigned int id;
     Worker* neighbour;
     MessageBuffer message_buffer;

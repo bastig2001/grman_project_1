@@ -23,6 +23,10 @@ Message* MessageBuffer::take() {
     return message;
 }
 
+bool MessageBuffer::is_empty() {
+    return !message_assigned;
+}
+
 
 #ifdef UNIT_TEST
 #include "catch2/catch.hpp"
@@ -32,7 +36,7 @@ TEST_CASE(
     "Message Buffer controls and secures access to its contained Message", 
     "[message_buffer][messages]"
 ) {
-    auto buffer{MessageBuffer()};
+    MessageBuffer buffer;
     
     SECTION("messages can't be assigned twice without them beeing taken first") {
         buffer.assign(new NoMessage());
@@ -40,8 +44,8 @@ TEST_CASE(
 
         thread t{[&](){
             this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.take();
             message_taken = true;
+            delete buffer.take();
         }};
 
         buffer.assign(new NoMessage());
@@ -57,11 +61,11 @@ TEST_CASE(
 
         thread t{[&](){
             this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.assign(new NoMessage());
             message_assigned = true;
+            buffer.assign(new NoMessage());
         }};
 
-        buffer.take();
+        delete buffer.take();
 
         CHECK(message_assigned);
 
@@ -82,6 +86,18 @@ TEST_CASE(
 
         REQUIRE(taken_message->type == MessageType::LogMessage);
         CHECK(taken_message->cast_to<LogMessage>()->content == log_msg_content);
+
+        delete taken_message;
+    }
+
+    SECTION("is_empty holds true when the buffer has no message assigned") {
+        REQUIRE(buffer.is_empty());
+
+        buffer.assign(new NoMessage());
+        CHECK_FALSE(buffer.is_empty());
+
+        delete buffer.take();
+        CHECK(buffer.is_empty());
     }
 }
 

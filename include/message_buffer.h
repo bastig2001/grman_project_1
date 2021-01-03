@@ -26,4 +26,7 @@ class MessageBuffer {
     // Blocks when there is no Message assigned after 
     //   the last one has been taken, until there is.
     Message* take();
+
+    // Returns if the Buffer has no Message
+    bool is_empty();
 };

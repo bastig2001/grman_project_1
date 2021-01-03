@@ -157,3 +157,43 @@ void Worker::end_election(Elected* elected) {
         neighbour->assign_message(new Elected(elected->id));
     }
 }
+
+
+// #ifdef UNIT_TEST
+// #include "catch2/catch.hpp"
+
+// TEST_CASE(
+//     "Worker interacts with its neighbour and implements the Chang and Roberts algorithm for elections", 
+//     "[worker][message_buffer][messages]"
+// ) {
+//     int* ids{GENERATE({0, 1}, {1, 0}, {2, 8}, {9, 5})};
+//     NoPresenter dummy_presenter;
+//     Worker dummy_worker(ids[0], 0, &dummy_presenter);
+//     Worker worker(ids[1], 0, &dummy_presenter, &dummy_worker);
+    
+//     SECTION("Worker is able to start election") {
+
+//     }
+
+//     SECTION("Worker is able to participate at election") {
+
+//     }
+
+//     SECTION("Worker can handle out of order election proposals") {
+
+//     }
+
+//     SECTION("Worker can be elected") {
+
+//     }
+
+//     SECTION("Worker acts accordingly when someone is elected") {
+
+//     }
+
+//     SECTION("Worker is able to finish election") {
+
+//     }
+// }
+
+// #endif
