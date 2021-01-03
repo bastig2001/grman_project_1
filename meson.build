@@ -26,6 +26,9 @@ catch2 = dependency('catch2')
 # add_global_arguments('-I' + get_option('fmt_include_dir'), language : 'cpp')
 fmt = dependency('fmt')
 
+# toml++: https://github.com/marzer/tomlplusplus/
+add_global_arguments('-I' + get_option('toml_include_dir'), language : 'cpp')
+
 inc_dir = include_directories('include')
 
 src = [
@@ -33,6 +36,7 @@ src = [
     'src/messages.cpp', 
     'src/worker.cpp', 
     'src/ring.cpp',
+    'src/config.cpp',
     'src/presenters/logger.cpp',
     'src/presenters/console_writer.cpp'
 ]
