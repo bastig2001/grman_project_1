@@ -31,5 +31,5 @@ struct ConfigExit {
     {}
 };
 
-ConfigExit configure(int argc, char* argv[], Config&);
-Presenter* get_and_start_presenter(const Config&);
+ConfigExit configure(int argc, char* argv[], Config& config);
+Presenter* get_and_start_presenter(const Config& config);

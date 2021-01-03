@@ -49,5 +49,5 @@ class Logger: public Presenter {
 
     virtual void election_is_finished(unsigned int leader_id) override;
 
-    virtual ~Logger() = default;
+    virtual ~Logger();
 };

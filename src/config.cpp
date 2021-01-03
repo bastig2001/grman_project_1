@@ -115,7 +115,6 @@ void write_log_start(shared_ptr<spdlog::logger>& logger) {
     logger->set_pattern("%v");
     logger->set_level(spdlog::level::info);
 
-    logger->info("");
     logger->info("=========================================================");
     logger->set_pattern("  This is a new Log starting at %Y-%m-%d %T.%e");
     logger->info("");

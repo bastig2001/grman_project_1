@@ -3,6 +3,14 @@
 using namespace std;
 
 
+Logger::~Logger() {
+    if (is_file_logger) {
+        logger->set_pattern("");
+        logger->set_level(spdlog::level::info);
+        logger->info("");
+    }
+}
+
 void Logger::log(spdlog::level::level_enum log_level, const string& message) {
     logger->log(log_level, message);
 }
