@@ -36,6 +36,7 @@ src = [
     'src/messages.cpp', 
     'src/worker.cpp', 
     'src/ring.cpp',
+    'src/config.cpp',
     'src/presenters/logger.cpp',
     'src/presenters/console_writer.cpp'
 ]
