@@ -10,6 +10,7 @@
 
 using namespace std;
 
+ConfigExit get_file_config(const string&, Config&);
 shared_ptr<spdlog::logger> get_and_start_logger(const Config&);
 void write_log_start(shared_ptr<spdlog::logger>&);
 
@@ -18,10 +19,17 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
     CLI::App app("Simulate a Ring with Elections using the Chang and Roberts algorithm");
 
     app.add_option(
-        "number-of-workers", 
+        "size", 
         config.number_of_workers, 
-        "Number of Workers in the Ring"
-    )->required();
+        "Positive Number of Workers in the Ring"
+    )->check(CLI::PositiveNumber);
+    app.add_option(
+        "-c, --config",
+        config.config_file,
+        "Toml config file from which to read\n"
+            "  Configurations can be overriden with the CLI\n"
+            "  Values which do not adhere to restrictions are replaced with default values"
+    )->check(CLI::ExistingFile);
     app.add_option(
         "-n, --number-of-elections",
         config.number_of_elections,
@@ -71,6 +79,22 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
     
     CLI11_PARSE(app, argc, argv);
 
+    if (config.number_of_workers == 0 && config.config_file == "") {
+        cerr << "size or --config is required\n"
+             << "Run with --help for more information." << endl;
+        return (int)CLI::ExitCodes::RequiredError;
+    }
+    else if (config.config_file != "") {
+        ConfigExit config_exit{get_file_config(config.config_file, config)};
+
+        if (config_exit.supposed_to_exit) {
+            return config_exit.exit_code;
+        }
+
+        // parse the CLI arguments a second time to override the file config
+        CLI11_PARSE(app, argc, argv);
+    }
+
     config.is_file_logger = config.log_file_name != "";
 
     if ((config.logging_enabled || config.is_file_logger) 
@@ -81,6 +105,49 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
     }
 
     return false; // Default return, program is not supposed to exit immediately
+}
+
+ConfigExit get_file_config(const string& file_name, Config& config) {
+    try {
+        auto file_config = toml::parse_file(file_name);
+
+        config.number_of_workers = 
+            file_config["ring"]["size"]
+            .value_or(config.number_of_workers);
+        config.number_of_elections = 
+            file_config["ring"]["number_of_elections"]
+            .value_or(config.number_of_elections);
+        config.after_election_sleeptime = 
+            file_config["ring"]["sleeptime"]
+            .value_or(config.after_election_sleeptime);
+        config.worker_sleeptime = 
+            file_config["ring"]["worker"]["sleeptime"]
+            .value_or(config.worker_sleeptime);
+
+        config.logging_enabled = 
+            file_config["log"]["enabled"]
+            .value_or(config.logging_enabled);
+        config.log_file_name = 
+            file_config["log"]["file"].value_or(config.log_file_name);
+        config.log_date = 
+            file_config["log"]["include_date"]
+            .value_or(config.log_date);
+        config.logging_level = (spdlog::level::level_enum)
+            file_config["log"]["level"]
+            .value_or((int)config.logging_level);
+    }
+    catch (const toml::parse_error& err) {
+        cerr << "Parsing the Toml config file failed:\n" << err << endl;
+        return 1;
+    }
+
+    if (config.number_of_workers == 0) {
+        cerr << "positive size is required and needs to be set in config file or as CLI argument\n"
+             << "Run with --help for more information." << endl;
+        return 2;
+    }
+
+    return false; // Default return, no parsing issues
 }
 
 Presenter* get_and_start_presenter(const Config& config) {

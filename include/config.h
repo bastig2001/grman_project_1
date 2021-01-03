@@ -6,7 +6,8 @@
 
 // All configurable values and values resulting from the configuration
 struct Config {
-    size_t number_of_workers{};
+    size_t number_of_workers{0};
+    std::string config_file{""};
     unsigned int number_of_elections{0};
     unsigned int after_election_sleeptime{5000};
     unsigned int worker_sleeptime{500};
