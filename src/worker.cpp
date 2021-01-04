@@ -10,7 +10,7 @@ using namespace std;
 
 
 void Worker::assign_message(Message* message) {
-    message_buffer.assign(message);
+    message_buffer.assign_async(message);
 }
 
 void Worker::set_neighbour(Worker* neighbour) {
