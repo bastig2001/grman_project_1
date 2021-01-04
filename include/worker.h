@@ -4,6 +4,7 @@
 #include "presenters/presenter.h"
 
 #include <chrono>
+#include <vector>
 
 // The return type for act_upon_message.
 // Represents the decision if the loop in operator() should continue, 
@@ -18,13 +19,18 @@ class Worker {
   private:
  #endif
     unsigned int id;
-    Worker* neighbour;
+    unsigned int position;
+    std::chrono::milliseconds sleeptime;
+    
     MessageBuffer message_buffer;
     bool is_leader{false};
     bool participates_in_election{false};
-    std::chrono::milliseconds sleeptime;
     Presenter* presenter;
     bool running{false};
+
+    // Pointers to all other Workers in the Ring, ordered by sending distance
+    // The closest Neighbour to which to send Messages is at index 0.
+    std::vector<Worker*> neighbours{};
 
     void set_presenter(Presenter* presenter);
 
@@ -36,14 +42,16 @@ class Worker {
     void propose_oneself();
     void end_election(Elected* elected);
 
+    void send_to_neighbour(Message* message);
+
   public:
     Worker(
         unsigned int id, 
+        unsigned int position,
         unsigned int sleeptime,
-        Presenter* presenter,
-        Worker* neighbour = nullptr
+        Presenter* presenter
     ): id{id}, 
-       neighbour{neighbour},
+       position{position},
        sleeptime{sleeptime}   
     {
         set_presenter(presenter);
@@ -58,9 +66,9 @@ class Worker {
     // and implements the functionalities for the concrete ring node.
     void operator()();
 
-    // Sets the neighbour of the Worker to the given pointer.
-    // Throws invalid_argument when the argument is a null pointer.
-    void set_neighbour(Worker* neighbour);
+    // Sets the neighbours of the Worker.
+    // Throws invalid_argument when the vector is empty.
+    void set_neighbours(std::vector<Worker*> neighbours);
 
     // if the worker is in the method operator()
     bool is_running() const;

@@ -13,12 +13,12 @@ void Worker::assign_message(Message* message) {
     message_buffer.assign_async(message);
 }
 
-void Worker::set_neighbour(Worker* neighbour) {
-    if (neighbour) {
-        this->neighbour = neighbour;
+void Worker::set_neighbours(vector<Worker*> neighbours) {
+    if (neighbours.size() > 0) {
+        this->neighbours = neighbours;
     }
     else {
-        throw invalid_argument("Neighbour must point to a valid Worker object.");
+        throw invalid_argument("There must be at least on neighbour.");
     }
 }
 
@@ -45,7 +45,7 @@ Worker::~Worker() {
 }
 
 void Worker::operator()() {
-    if (neighbour) {
+    if (neighbours.size() > 0) {
         running = true;
 
         bool continue_operation{true};
@@ -128,7 +128,7 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 
 void Worker::forward_election_proposal(ElectionProposal* proposal) {
     presenter->worker_forwards_election_proposal(id, proposal->id);
-    neighbour->assign_message(new ElectionProposal(proposal->id));
+    send_to_neighbour(new ElectionProposal(proposal->id));
 }
 
 void Worker::be_elected() {
@@ -138,12 +138,12 @@ void Worker::be_elected() {
     presenter->worker_stops_election_participation(id);
     participates_in_election = false;
 
-    neighbour->assign_message(new Elected(id));
+    send_to_neighbour(new Elected(id));
 }
 
 void Worker::propose_oneself() {
     presenter->worker_proposes_itself_in_election(id);
-    neighbour->assign_message(new ElectionProposal(id));
+    send_to_neighbour(new ElectionProposal(id));
 }
 
 void Worker::end_election(Elected* elected) {
@@ -154,8 +154,12 @@ void Worker::end_election(Elected* elected) {
         presenter->worker_stops_election_participation(id);
         participates_in_election = false;
 
-        neighbour->assign_message(new Elected(elected->id));
+        send_to_neighbour(new Elected(elected->id));
     }
+}
+
+void Worker::send_to_neighbour(Message* message) {
+    neighbours[0]->assign_message(message);
 }
 
 
@@ -178,8 +182,9 @@ TEST_CASE(
     unsigned int dummy_id{get<0>(ids)};
     unsigned int worker_id{get<1>(ids)};
 
-    Worker dummy_worker(dummy_id, 0, nullptr);
-    Worker worker(worker_id, 0, nullptr, &dummy_worker);
+    Worker dummy_worker(dummy_id, 0, 0, nullptr);
+    Worker worker(worker_id, 0, 0, nullptr);
+    worker.set_neighbours({&dummy_worker});
 
     thread worker_thread{ref(worker)};
     sleep();
