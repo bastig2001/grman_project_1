@@ -42,6 +42,10 @@ class Worker {
     void propose_oneself();
     void end_election(Elected* elected);
 
+    void remove_dead_worker(DeadWorker* dead_worker);
+    bool position_is_not_neighbour(unsigned int position);
+    unsigned int get_neighbours_index_for_position(unsigned int position);
+
     void send_to_neighbour(Message* message);
 
   public:

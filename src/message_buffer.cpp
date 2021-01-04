@@ -54,7 +54,7 @@ bool MessageBuffer::is_empty() {
 
 TEST_CASE(
     "Message Buffer controls and secures access to its contained Message", 
-    "[message_buffer][messages]"
+    "[message_buffer]"
 ) {
     MessageBuffer buffer;
     

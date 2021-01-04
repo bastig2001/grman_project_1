@@ -1,4 +1,5 @@
 #include "worker.h"
+#include "messages.h"
 #include "presenters/no_presenter.h"
 
 #include <spdlog/spdlog.h>
@@ -83,6 +84,9 @@ ContinueOperation Worker::act_upon_message(Message* message) {
         case MessageType::Stop:
             continue_operation = false;
             break;
+        case MessageType::DeadWorker:
+            remove_dead_worker(message->cast_to<DeadWorker>());
+            break;
         case MessageType::NoMessage:
             break;
     }
@@ -162,6 +166,39 @@ void Worker::end_election(Elected* elected) {
     }
 }
 
+void Worker::remove_dead_worker(DeadWorker* dead_worker) {
+    if (position_is_not_neighbour(dead_worker->position)) {
+        neighbours.erase(
+            neighbours.begin() 
+                + 
+            get_neighbours_index_for_position(dead_worker->position)
+        );
+
+        send_to_neighbour(new DeadWorker(dead_worker->position));
+    }
+    // When the position is its neighbour, 
+    // the dead worker has been already removed, 
+    // because only the preceding neighbour can know if a worker is dead 
+    // and must therefore be the first to recognize and remove it.
+}
+
+bool Worker::position_is_not_neighbour(unsigned int position) {
+    return !(
+        position 
+            == 
+        (this->position + 1) % (neighbours.size() + 1)
+    );
+}
+
+unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
+    if (position > this->position) {
+        return position - this->position - 1;
+    }
+    else {
+        return position - this->position + neighbours.size();
+    }
+}
+
 void Worker::send_to_neighbour(Message* message) {
     neighbours[0]->assign_message_sync(message);
 }
@@ -177,7 +214,7 @@ void Worker::send_to_neighbour(Message* message) {
 
 TEST_CASE(
     "Worker interacts with its neighbour and implements the Chang and Roberts algorithm for elections", 
-    "[worker][message_buffer][messages]"
+    "[worker][uses_message_buffer][worker_election]"
 ) {
     tuple<unsigned int, unsigned int> ids{GENERATE(
         tuple<unsigned int, unsigned int>{2, 8}, 
@@ -290,6 +327,60 @@ TEST_CASE(
         CHECK_FALSE(worker.participates_in_election);
         CHECK(worker.is_leader);
 
+        CHECK(dummy_worker.message_buffer.is_empty());
+    }
+
+    worker.assign_message_sync(new Stop());
+    sleep();
+
+    REQUIRE_FALSE(dummy_worker.is_running());
+    REQUIRE_FALSE(worker.is_running());
+
+    worker_thread.join();
+}
+
+TEST_CASE(
+    "Worker interacts with its neighbours and can detect and correct faults in the ring", 
+    "[worker][uses_message_buffer][worker_fault_tolerance]"
+) {
+    unsigned int number_of_neighbours{GENERATE(11, 15)};
+    unsigned int worker_position{GENERATE(0, 1, 4, 11)};
+
+    Worker dummy_worker(0, 0, 0, nullptr);
+    Worker worker(0, worker_position, 0, nullptr);
+    
+    vector<Worker*> neighbours{};
+    neighbours.assign(number_of_neighbours, &dummy_worker);
+    worker.set_neighbours(move(neighbours));
+
+    thread worker_thread{ref(worker)};
+    sleep();
+
+    REQUIRE_FALSE(dummy_worker.is_running());
+    REQUIRE(worker.is_running());
+    
+    SECTION("Worker is able to remove dead neighbour") {
+        unsigned int dead_worker_position{GENERATE(3, 9)};
+        worker.assign_message_sync(new DeadWorker(dead_worker_position));
+        sleep();
+
+        CHECK(worker.neighbours.size() == number_of_neighbours - 1);
+
+        auto message{dummy_worker.message_buffer.take()};
+        REQUIRE(message->type == MessageType::DeadWorker);
+        CHECK(message->cast_to<DeadWorker>()->position == dead_worker_position);
+
+        delete message;
+    }
+
+    SECTION("Worker does not react on a dead Worker Message for its neighbour") {
+        unsigned int neighbour_position{
+            (worker_position + 1) % (number_of_neighbours + 1)
+        };
+        worker.assign_message_sync(new DeadWorker(neighbour_position));
+        sleep();
+
+        CHECK(worker.neighbours.size() == number_of_neighbours);
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 

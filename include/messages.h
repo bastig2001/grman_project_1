@@ -10,7 +10,8 @@ enum class MessageType {
     Stop,
     StartElection,
     ElectionProposal,
-    Elected
+    Elected,
+    DeadWorker
 };
 
 // A Message, meant to represent Information for Communication between Workers.
@@ -103,3 +104,17 @@ struct Elected: Message {
         return fmt::format("Worker {} has been elected", id);
     }
 };
+
+struct DeadWorker: Message {
+    const unsigned int position;
+
+    DeadWorker(
+        unsigned int position
+    ): Message(MessageType::DeadWorker), 
+       position{position} 
+    {}
+
+    explicit operator std::string() const override {
+        return fmt::format("Worker on position {} is marked dead", position);
+    }
+}; 
