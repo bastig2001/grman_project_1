@@ -9,7 +9,11 @@
 using namespace std;
 
 
-void Worker::assign_message(Message* message) {
+void Worker::assign_message_sync(Message* message) {
+    message_buffer.assign_sync(message);
+}
+
+void Worker::assign_message_async(Message* message) {
     message_buffer.assign_async(message);
 }
 
@@ -159,7 +163,7 @@ void Worker::end_election(Elected* elected) {
 }
 
 void Worker::send_to_neighbour(Message* message) {
-    neighbours[0]->assign_message(message);
+    neighbours[0]->assign_message_sync(message);
 }
 
 
@@ -193,7 +197,7 @@ TEST_CASE(
     REQUIRE(worker.is_running());
     
     SECTION("Worker is able to start election") {
-        worker.assign_message(new StartElection());
+        worker.assign_message_sync(new StartElection());
         sleep();
 
         CHECK(worker.participates_in_election);
@@ -209,7 +213,7 @@ TEST_CASE(
         worker.participates_in_election = false;
         worker.is_leader = GENERATE(true, false);
 
-        worker.assign_message(new ElectionProposal(dummy_id));
+        worker.assign_message_sync(new ElectionProposal(dummy_id));
         sleep();
 
         CHECK(worker.participates_in_election);
@@ -225,7 +229,7 @@ TEST_CASE(
     SECTION("Worker can handle out of order election proposals") {
         worker.participates_in_election = true;
 
-        worker.assign_message(new ElectionProposal(dummy_id));
+        worker.assign_message_sync(new ElectionProposal(dummy_id));
         sleep();
 
         CHECK(worker.participates_in_election);
@@ -246,7 +250,7 @@ TEST_CASE(
         worker.participates_in_election = true;
         worker.is_leader = false;
 
-        worker.assign_message(new ElectionProposal(worker_id));
+        worker.assign_message_sync(new ElectionProposal(worker_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -263,7 +267,7 @@ TEST_CASE(
         worker.participates_in_election = true;
         worker.is_leader = false;
 
-        worker.assign_message(new Elected(dummy_id));
+        worker.assign_message_sync(new Elected(dummy_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -280,7 +284,7 @@ TEST_CASE(
         worker.participates_in_election = false;
         worker.is_leader = true;
 
-        worker.assign_message(new Elected(worker_id));
+        worker.assign_message_sync(new Elected(worker_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -289,7 +293,7 @@ TEST_CASE(
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
-    worker.assign_message(new Stop());
+    worker.assign_message_sync(new Stop());
     sleep();
 
     REQUIRE_FALSE(dummy_worker.is_running());

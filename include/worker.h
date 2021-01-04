@@ -59,8 +59,13 @@ class Worker {
 
     ~Worker();
 
-    // Assigns a Message to the Worker's Message Buffer for execution,
-    void assign_message(Message* message);
+    // Assigns a Message to the Worker's Message Buffer for execution 
+    // and blocks until it's taken.
+    void assign_message_sync(Message* message);
+
+    // Assigns a Message to the Worker's Message Buffer for execution 
+    // but doesn't for it to be taken, only for it to be received by the Buffer.
+    void assign_message_async(Message* message);
 
     // The execution loop which handles all incoming Messages 
     // and implements the functionalities for the concrete ring node.

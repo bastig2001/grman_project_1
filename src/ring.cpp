@@ -93,7 +93,7 @@ void Ring::start() {
 
 void Ring::start_election() {
     if (worker_threads.size() > 0) {
-        workers[0]->assign_message(new StartElection());
+        workers[0]->assign_message_async(new StartElection());
     }
 }
 
@@ -105,7 +105,7 @@ void Ring::stop() {
             && 
             workers[i]->is_running()
         ) {
-            workers[i]->assign_message(new Stop());
+            workers[i]->assign_message_async(new Stop());
             worker_threads[i].join();
         }
     }
