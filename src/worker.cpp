@@ -165,7 +165,7 @@ void Worker::end_election(Elected* elected) {
 #include <cmath>
 
 // sleep is needed since there is another thread
-#define sleep() this_thread::sleep_for(chrono::milliseconds(50))
+#define sleep() this_thread::sleep_for(chrono::milliseconds(25))
 
 TEST_CASE(
     "Worker interacts with its neighbour and implements the Chang and Roberts algorithm for elections", 

@@ -12,6 +12,7 @@ class MessageBuffer {
   private:
     Message* message;
     bool message_assigned{false};
+    bool message_is_taken{}; // similar to not message_assigned but meant for assign_sync
     std::mutex buffer_mtx, rendezvous_mtx;
     std::condition_variable message_takable;    // if there is a message to be taken
     std::condition_variable message_taken;      // if the message is taken (for assign_sync)

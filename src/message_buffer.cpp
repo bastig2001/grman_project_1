@@ -8,16 +8,18 @@ using namespace std;
 void MessageBuffer::assign_sync(Message* message) {
     lock_guard<mutex> rendezvous_lck{rendezvous_mtx};
 
+    message_is_taken = false;
     assign_async(message);
 
-    mutex wait_mtx;
-    unique_lock<mutex> wait_lck{wait_mtx};
-    message_taken.wait(wait_lck, [this](){ return !message_assigned; });
+    mutex wait_mtx; // this mutex is only for blocking the current thread
+    unique_lock<mutex> wait_lck{wait_mtx}; 
+    // rendezvous_lck must not be unlocked while waiting
+    message_taken.wait(wait_lck, [this](){ return message_is_taken; });
 }
 
 void MessageBuffer::assign_async(Message* message) {
     unique_lock<mutex> buffer_lck{buffer_mtx};
-    message_assignable.wait(buffer_lck, [this](){ return !message_assigned; });
+    message_assignable.wait(buffer_lck, [this](){ return is_empty(); });
 
     this->message = message;
     message_assigned = true;
@@ -28,9 +30,11 @@ Message* MessageBuffer::take() {
     unique_lock<mutex> buffer_lck{buffer_mtx};
     message_takable.wait(buffer_lck, [this](){ return message_assigned; });
 
+    message_is_taken = true;
     message_assigned = false;
     message_taken.notify_one();
     message_assignable.notify_one();
+
     return message;
 }
 
@@ -45,8 +49,8 @@ bool MessageBuffer::is_empty() {
 #include <tuple>
 
 // sleep is needed since multiple threads are used
-#define sleep() this_thread::sleep_for(chrono::milliseconds(50))
-#define sleep_more(multiplier) this_thread::sleep_for(chrono::milliseconds(50 * multiplier))
+#define sleep() this_thread::sleep_for(chrono::milliseconds(25))
+#define sleep_more(multiplier) this_thread::sleep_for(chrono::milliseconds(25 * multiplier))
 
 TEST_CASE(
     "Message Buffer controls and secures access to its contained Message", 
@@ -159,6 +163,35 @@ TEST_CASE(
         sleep();
 
         CHECK(second_message_taken);
+
+        t1.join();
+        t2.join();
+    }
+
+    SECTION("simultaneous asssign_sync and assign_async calls are both handled and both exit") {
+        bool first_message_taken{false};
+        bool second_message_assigned{false};
+
+        thread t1{[&](){
+            sleep();
+            buffer.assign_sync(new NoMessage);
+            first_message_taken = true;
+        }};
+        thread t2{[&](){
+            sleep_more(2);
+            buffer.assign_async(new NoMessage);
+            second_message_assigned = true;
+        }};
+
+        sleep_more(3);
+
+        delete buffer.take();
+        sleep();
+
+        CHECK(first_message_taken);
+        CHECK(second_message_assigned);
+
+        delete buffer.take();
 
         t1.join();
         t2.join();
