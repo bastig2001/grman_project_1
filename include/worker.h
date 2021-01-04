@@ -44,6 +44,7 @@ class Worker {
 
     void remove_dead_worker(DeadWorker* dead_worker);
     bool position_is_not_neighbour(unsigned int position);
+    void add_new_worker(NewWorker* new_worker);
     unsigned int get_neighbours_index_for_position(unsigned int position);
 
     void send_to_neighbour(Message* message);
@@ -81,4 +82,8 @@ class Worker {
 
     // if the worker is in the method operator()
     bool is_running() const;
+
+    // if two workers are equal is determined by their id
+    bool operator==(const Worker&);
+    bool operator!=(const Worker&);
 };

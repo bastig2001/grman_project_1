@@ -87,6 +87,9 @@ ContinueOperation Worker::act_upon_message(Message* message) {
         case MessageType::DeadWorker:
             remove_dead_worker(message->cast_to<DeadWorker>());
             break;
+        case MessageType::NewWorker:
+            add_new_worker(message->cast_to<NewWorker>());
+            break;
         case MessageType::NoMessage:
             break;
     }
@@ -136,7 +139,7 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 
 void Worker::forward_election_proposal(ElectionProposal* proposal) {
     presenter->worker_forwards_election_proposal(id, proposal->id);
-    send_to_neighbour(new ElectionProposal(proposal->id));
+    send_to_neighbour(new ElectionProposal(*proposal));
 }
 
 void Worker::be_elected() {
@@ -174,7 +177,7 @@ void Worker::remove_dead_worker(DeadWorker* dead_worker) {
             get_neighbours_index_for_position(dead_worker->position)
         );
 
-        send_to_neighbour(new DeadWorker(dead_worker->position));
+        send_to_neighbour(new DeadWorker(*dead_worker));
     }
     // When the position is its neighbour, 
     // the dead worker has been already removed, 
@@ -190,6 +193,24 @@ bool Worker::position_is_not_neighbour(unsigned int position) {
     );
 }
 
+void Worker::add_new_worker(NewWorker* new_worker) {
+    unsigned int new_neighbour_index{
+        get_neighbours_index_for_position(new_worker->position)
+    };
+
+    if (*neighbours[new_neighbour_index] != *new_worker->worker) {
+        neighbours.insert(
+            neighbours.begin() + new_neighbour_index, 
+            new_worker->worker
+        );
+
+        send_to_neighbour(new NewWorker(*new_worker));
+    }
+    // If the new worker and the neighbour at the index for the new worker 
+    // are the same, the new worker has already been inserted 
+    // and there is nothing left to do
+}
+
 unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
     if (position > this->position) {
         return position - this->position - 1;
@@ -201,4 +222,12 @@ unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
 
 void Worker::send_to_neighbour(Message* message) {
     neighbours[0]->assign_message_sync(message);
+}
+
+bool Worker::operator==(const Worker& other_worker) {
+    return id == other_worker.id;
+}
+
+bool Worker::operator!=(const Worker& other_worker) {
+    return !(*this == other_worker);
 }

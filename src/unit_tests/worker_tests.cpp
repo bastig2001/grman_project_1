@@ -34,10 +34,11 @@ TEST_CASE(
     REQUIRE(worker.is_running());
     
     SECTION("Worker is able to start election") {
-        worker.assign_message_sync(new StartElection());
+        worker.assign_message_async(new StartElection());
         sleep();
 
         CHECK(worker.participates_in_election);
+        REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
         REQUIRE(message->type == MessageType::ElectionProposal);
@@ -50,11 +51,12 @@ TEST_CASE(
         worker.participates_in_election = false;
         worker.is_leader = GENERATE(true, false);
 
-        worker.assign_message_sync(new ElectionProposal(dummy_id));
+        worker.assign_message_async(new ElectionProposal(dummy_id));
         sleep();
 
         CHECK(worker.participates_in_election);
         CHECK_FALSE(worker.is_leader);
+        REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
         REQUIRE(message->type == MessageType::ElectionProposal);
@@ -66,10 +68,11 @@ TEST_CASE(
     SECTION("Worker can handle out of order election proposals") {
         worker.participates_in_election = true;
 
-        worker.assign_message_sync(new ElectionProposal(dummy_id));
+        worker.assign_message_async(new ElectionProposal(dummy_id));
         sleep();
 
         CHECK(worker.participates_in_election);
+        REQUIRE(dummy_worker.message_buffer.is_empty() == (dummy_id < worker_id));
 
         if (dummy_id > worker_id) {
             auto message{dummy_worker.message_buffer.take()};
@@ -78,20 +81,18 @@ TEST_CASE(
 
             delete message;
         }
-        else {
-            REQUIRE(dummy_worker.message_buffer.is_empty());
-        }
     }
 
     SECTION("Worker can be elected") {
         worker.participates_in_election = true;
         worker.is_leader = false;
 
-        worker.assign_message_sync(new ElectionProposal(worker_id));
+        worker.assign_message_async(new ElectionProposal(worker_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
         CHECK(worker.is_leader);
+        REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
         REQUIRE(message->type == MessageType::Elected);
@@ -104,11 +105,12 @@ TEST_CASE(
         worker.participates_in_election = true;
         worker.is_leader = false;
 
-        worker.assign_message_sync(new Elected(dummy_id));
+        worker.assign_message_async(new Elected(dummy_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
         CHECK_FALSE(worker.is_leader);
+        REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
         REQUIRE(message->type == MessageType::Elected);
@@ -121,7 +123,7 @@ TEST_CASE(
         worker.participates_in_election = false;
         worker.is_leader = true;
 
-        worker.assign_message_sync(new Elected(worker_id));
+        worker.assign_message_async(new Elected(worker_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -130,7 +132,7 @@ TEST_CASE(
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
-    worker.assign_message_sync(new Stop());
+    worker.assign_message_async(new Stop());
     sleep();
 
     REQUIRE_FALSE(dummy_worker.is_running());
@@ -161,10 +163,11 @@ TEST_CASE(
     
     SECTION("Worker is able to remove dead neighbour") {
         unsigned int dead_worker_position{GENERATE(3, 9)};
-        worker.assign_message_sync(new DeadWorker(dead_worker_position));
+        worker.assign_message_async(new DeadWorker(dead_worker_position));
         sleep();
 
         CHECK(worker.neighbours.size() == number_of_neighbours - 1);
+        REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
         REQUIRE(message->type == MessageType::DeadWorker);
@@ -177,14 +180,36 @@ TEST_CASE(
         unsigned int neighbour_position{
             (worker_position + 1) % (number_of_neighbours + 1)
         };
-        worker.assign_message_sync(new DeadWorker(neighbour_position));
+        worker.assign_message_async(new DeadWorker(neighbour_position));
         sleep();
 
         CHECK(worker.neighbours.size() == number_of_neighbours);
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
-    worker.assign_message_sync(new Stop());
+    SECTION("Worker is able to add a new worker to its neighbours on correct index") {
+        Worker other_worker(1, 0, 0, nullptr);
+        unsigned int new_worker_position{GENERATE(3, 9)};
+        unsigned int expected_new_worker_index{
+            worker.get_neighbours_index_for_position(new_worker_position)
+        };
+        worker.assign_message_async(
+            new NewWorker(new_worker_position, &other_worker)
+        );
+        sleep();
+
+        CHECK(worker.neighbours.size() == number_of_neighbours + 1);
+        CHECK(worker.neighbours[expected_new_worker_index]->id == other_worker.id);
+        REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
+
+        auto message{dummy_worker.message_buffer.take()};
+        REQUIRE(message->type == MessageType::NewWorker);
+        CHECK(message->cast_to<NewWorker>()->position == new_worker_position);
+
+        delete message;
+    }
+
+    worker.assign_message_async(new Stop());
     sleep();
 
     REQUIRE_FALSE(dummy_worker.is_running());
