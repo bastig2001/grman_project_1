@@ -4,7 +4,6 @@
 
 #include <condition_variable>
 #include <mutex>
-#include <memory>
 
 // A Message Buffer, which holds at most one element, 
 // meant for Communication between Workers.
@@ -20,8 +19,10 @@ class MessageBuffer {
 
   public:
     // Assigns a a given Message to the Buffer.
-    // Blocks until the Message has been taken.
-    void assign_sync(Message* message);
+    // Blocks until the Message has been taken or it times out.
+    // Waittime is in milliseconds.
+    // If it times out, it returns false otherwise true
+    bool assign_sync(Message* message, unsigned int waittime);
 
     // Assigns a a given Message to the Buffer.
     // Blocks when the previously assigned Message  

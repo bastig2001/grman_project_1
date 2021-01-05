@@ -6,8 +6,8 @@
 #include <thread>
 
 // sleep is needed since multiple threads are used
-#define sleep() this_thread::sleep_for(chrono::milliseconds(20))
-#define sleep_more(multiplier) this_thread::sleep_for(chrono::milliseconds(20 * multiplier))
+#define sleep() this_thread::sleep_for(chrono::milliseconds(25))
+#define sleep_more(multiplier) this_thread::sleep_for(chrono::milliseconds(25 * multiplier))
 
 using namespace std;
 
@@ -16,6 +16,7 @@ TEST_CASE(
     "Message Buffer controls and secures access to its contained Message", 
     "[message_buffer]"
 ) {
+    unsigned int waittime{100}; // ms
     MessageBuffer buffer;
     
     SECTION("messages can't be assigned twice without them beeing taken first") {
@@ -89,7 +90,7 @@ TEST_CASE(
             delete buffer.take();
         }};
 
-        buffer.assign_sync(new NoMessage());
+        CHECK(buffer.assign_sync(new NoMessage(), waittime));
 
         CHECK(message_taken);
 
@@ -102,12 +103,12 @@ TEST_CASE(
 
         thread t1{[&](){
             sleep();
-            buffer.assign_sync(new NoMessage);
+            CHECK(buffer.assign_sync(new NoMessage(), waittime));
             first_message_taken = true;
         }};
         thread t2{[&](){
             sleep_more(2);
-            buffer.assign_sync(new NoMessage);
+            CHECK(buffer.assign_sync(new NoMessage(), waittime));
             second_message_taken = true;
         }};
 
@@ -134,12 +135,12 @@ TEST_CASE(
 
         thread t1{[&](){
             sleep();
-            buffer.assign_sync(new NoMessage);
+            CHECK(buffer.assign_sync(new NoMessage(), waittime));
             first_message_taken = true;
         }};
         thread t2{[&](){
             sleep_more(2);
-            buffer.assign_async(new NoMessage);
+            buffer.assign_async(new NoMessage());
             second_message_assigned = true;
         }};
 

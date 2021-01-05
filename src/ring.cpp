@@ -47,7 +47,7 @@ void Ring::set_worker_neighbours() {
             : it + 1
         };
         vector<Worker*> neighbours{first_neighbour, workers.end()};
-        neighbours.insert(neighbours.end(), workers.begin(), it);
+        neighbours.insert(neighbours.end(), workers.begin(), it + 1);
 
         (*it)->set_neighbours(move(neighbours));
     }

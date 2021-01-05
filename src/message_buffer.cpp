@@ -1,11 +1,12 @@
 #include "message_buffer.h"
 
 #include <thread>
+#include <chrono>
 
 using namespace std;
 
 
-void MessageBuffer::assign_sync(Message* message) {
+bool MessageBuffer::assign_sync(Message* message, unsigned int waittime) {
     // only one thread at a time is allowed to synchronously assign
     lock_guard<mutex> assign_sync_lck{assign_sync_mtx};
 
@@ -18,7 +19,10 @@ void MessageBuffer::assign_sync(Message* message) {
     assign_async(message);
 
     rendezvous_lck.lock();
-    message_taken.wait(rendezvous_lck, [this](){ return message_is_taken; });
+    return message_taken.wait_for(
+        rendezvous_lck, chrono::milliseconds(waittime), 
+        [this](){ return message_is_taken; }
+    );
 }
 
 void MessageBuffer::assign_async(Message* message) {

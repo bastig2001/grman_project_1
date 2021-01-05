@@ -7,7 +7,7 @@
 #include <thread>
 
 // sleep is needed since there is another thread
-#define sleep() this_thread::sleep_for(chrono::milliseconds(20))
+#define sleep() this_thread::sleep_for(chrono::milliseconds(25))
 
 using namespace std;
 
@@ -145,14 +145,14 @@ TEST_CASE(
     "Worker interacts with its neighbours and can detect and correct faults in the ring", 
     "[worker][uses_message_buffer][worker_fault_tolerance]"
 ) {
-    unsigned int number_of_neighbours{GENERATE(11u, 15u)};
+    unsigned int number_of_workers{GENERATE(12u, 15u)};
     unsigned int worker_position{GENERATE(0u, 1u, 4u, 11u)};
 
     Worker dummy_worker(0, 0, 0, nullptr);
     Worker worker(0, worker_position, 0, nullptr);
     
     vector<Worker*> neighbours{};
-    neighbours.assign(number_of_neighbours, &dummy_worker);
+    neighbours.assign(number_of_workers, &dummy_worker);
     worker.set_neighbours(move(neighbours));
 
     thread worker_thread{ref(worker)};
@@ -166,7 +166,7 @@ TEST_CASE(
         worker.assign_message_sync(new DeadWorker(dead_worker_position));
         sleep();
 
-        CHECK(worker.neighbours.size() == number_of_neighbours - 1);
+        CHECK(worker.neighbours.size() == number_of_workers - 1);
         REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
@@ -178,12 +178,12 @@ TEST_CASE(
 
     SECTION("Worker does not react on a dead Worker Message for its neighbour") {
         unsigned int neighbour_position{
-            (worker_position + 1) % (number_of_neighbours + 1)
+            (worker_position + 1) % number_of_workers
         };
         worker.assign_message_sync(new DeadWorker(neighbour_position));
         sleep();
 
-        CHECK(worker.neighbours.size() == number_of_neighbours);
+        CHECK(worker.neighbours.size() == number_of_workers);
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
@@ -198,7 +198,7 @@ TEST_CASE(
         );
         sleep();
 
-        CHECK(worker.neighbours.size() == number_of_neighbours + 1);
+        CHECK(worker.neighbours.size() == number_of_workers + 1);
         CHECK(worker.neighbours[expected_new_worker_index]->id == other_worker.id);
         REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 

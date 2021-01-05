@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <vector>
+#include <future>
 
 // The return type for act_upon_message.
 // Represents the decision if the loop in operator() should continue, 
@@ -20,16 +21,18 @@ class Worker {
  #endif
     unsigned int id;
     unsigned int position;
-    std::chrono::milliseconds sleeptime;
+    unsigned int sleeptime; // in ms
     
     MessageBuffer message_buffer;
     bool is_leader{false};
     bool participates_in_election{false};
-    Presenter* presenter;
     bool running{false};
+    Presenter* presenter;
+    std::future<bool> previous_message_sent;
 
-    // Pointers to all other Workers in the Ring, ordered by sending distance
+    // Pointers to all Workers in the Ring, ordered by sending distance
     // The closest Neighbour to which to send Messages is at index 0.
+    // Itself is at the last position in the vector.
     std::vector<Worker*> neighbours{};
 
     void set_presenter(Presenter* presenter);
@@ -42,10 +45,11 @@ class Worker {
     void propose_oneself();
     void end_election(Elected* elected);
 
-    void remove_dead_worker(DeadWorker* dead_worker);
-    bool position_is_not_neighbour(unsigned int position);
+    void handle_dead_worker(DeadWorker* dead_worker);
     void add_new_worker(NewWorker* new_worker);
     unsigned int get_neighbours_index_for_position(unsigned int position);
+    void remove_dead_worker(unsigned int position);
+    unsigned int get_direct_neighbour_position();
 
     void send_to_neighbour(Message* message);
 
@@ -53,7 +57,7 @@ class Worker {
     Worker(
         unsigned int id, 
         unsigned int position,
-        unsigned int sleeptime,
+        unsigned int sleeptime, // in milliseconds
         Presenter* presenter
     ): id{id}, 
        position{position},
@@ -66,7 +70,8 @@ class Worker {
 
     // Assigns a Message to the Worker's Message Buffer for execution 
     // and blocks until it's taken.
-    void assign_message_sync(Message* message);
+    // If it times out, it returns false otherwise true
+    bool assign_message_sync(Message* message);
 
     // Assigns a Message to the Worker's Message Buffer for execution 
     // but doesn't for it to be taken, only for it to be received by the Buffer.

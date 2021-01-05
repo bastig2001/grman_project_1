@@ -6,12 +6,20 @@
 #include <chrono>
 #include <stdexcept>
 #include <thread>
+#include <cmath>
 
 using namespace std;
 
 
-void Worker::assign_message_sync(Message* message) {
-    message_buffer.assign_sync(message);
+bool Worker::assign_message_sync(Message* message) {
+    // 1 worker sleeptime should be expected at least
+    // 2 because it might get a message from the Ring
+    // 2.5 because there are processes besides just sleeping
+    // The waittime is at least 1s.
+    return message_buffer.assign_sync(
+        message, 
+        max(1000u, (unsigned int)(sleeptime * 2.5))
+    );
 }
 
 void Worker::assign_message_async(Message* message) {
@@ -23,7 +31,7 @@ void Worker::set_neighbours(vector<Worker*> neighbours) {
         this->neighbours = neighbours;
     }
     else {
-        throw invalid_argument("There must be at least on neighbour.");
+        throw invalid_argument("There must be at least on neighbour to which to send.");
     }
 }
 
@@ -55,7 +63,7 @@ void Worker::operator()() {
 
         bool continue_operation{true};
         while (continue_operation) {
-            this_thread::sleep_for(sleeptime);
+            this_thread::sleep_for(chrono::milliseconds(sleeptime));
             continue_operation = act_upon_message(message_buffer.take());
         }
 
@@ -85,7 +93,7 @@ ContinueOperation Worker::act_upon_message(Message* message) {
             continue_operation = false;
             break;
         case MessageType::DeadWorker:
-            remove_dead_worker(message->cast_to<DeadWorker>());
+            handle_dead_worker(message->cast_to<DeadWorker>());
             break;
         case MessageType::NewWorker:
             add_new_worker(message->cast_to<NewWorker>());
@@ -169,28 +177,14 @@ void Worker::end_election(Elected* elected) {
     }
 }
 
-void Worker::remove_dead_worker(DeadWorker* dead_worker) {
-    if (position_is_not_neighbour(dead_worker->position)) {
-        neighbours.erase(
-            neighbours.begin() 
-                + 
-            get_neighbours_index_for_position(dead_worker->position)
-        );
-
-        send_to_neighbour(new DeadWorker(*dead_worker));
+void Worker::handle_dead_worker(DeadWorker* dead_worker) {
+    if (dead_worker->position != get_direct_neighbour_position()) {
+        remove_dead_worker(dead_worker->position);
     }
     // When the position is its neighbour, 
     // the dead worker has been already removed, 
     // because only the preceding neighbour can know if a worker is dead 
     // and must therefore be the first to recognize and remove it.
-}
-
-bool Worker::position_is_not_neighbour(unsigned int position) {
-    return !(
-        position 
-            == 
-        (this->position + 1) % (neighbours.size() + 1)
-    );
 }
 
 void Worker::add_new_worker(NewWorker* new_worker) {
@@ -211,17 +205,41 @@ void Worker::add_new_worker(NewWorker* new_worker) {
     // and there is nothing left to do
 }
 
+void Worker::send_to_neighbour(Message* message) {
+    if (previous_message_sent.valid() && !previous_message_sent.get()) {
+        // previous message still hasn't been retrieved by neighbour,
+        // neighbour is considered dead
+        remove_dead_worker(get_direct_neighbour_position());
+    }
+
+    previous_message_sent = async(
+        [message{message}, this](){ 
+            return neighbours[0]->assign_message_sync(message); 
+        }
+    );
+}
+
+void Worker::remove_dead_worker(unsigned int position) {
+    neighbours.erase(
+        neighbours.begin() 
+            + 
+        get_neighbours_index_for_position(position)
+    );
+
+    send_to_neighbour(new DeadWorker(position));
+}
+
+unsigned int Worker::get_direct_neighbour_position() {
+    return (position + 1) % neighbours.size();
+}
+
 unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
     if (position > this->position) {
         return position - this->position - 1;
     }
     else {
-        return position - this->position + neighbours.size();
+        return position - this->position - 1 + neighbours.size();
     }
-}
-
-void Worker::send_to_neighbour(Message* message) {
-    neighbours[0]->assign_message_sync(message);
 }
 
 bool Worker::operator==(const Worker& other_worker) {
