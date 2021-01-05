@@ -6,15 +6,19 @@ using namespace std;
 
 
 void MessageBuffer::assign_sync(Message* message) {
-    lock_guard<mutex> rendezvous_lck{rendezvous_mtx};
+    // only one thread at a time is allowed to synchronously assign
+    lock_guard<mutex> assign_sync_lck{assign_sync_mtx};
 
+    unique_lock<mutex> rendezvous_lck{rendezvous_mtx}; 
     message_is_taken = false;
+    rendezvous_lck.unlock();
+
+    // rendezvous_lck beeing locked during assignment could cause a deadlock 
+    //      in combination with another assign_async call and take
     assign_async(message);
 
-    mutex wait_mtx; // this mutex is only for blocking the current thread
-    unique_lock<mutex> wait_lck{wait_mtx}; 
-    // rendezvous_lck must not be unlocked while waiting
-    message_taken.wait(wait_lck, [this](){ return message_is_taken; });
+    rendezvous_lck.lock();
+    message_taken.wait(rendezvous_lck, [this](){ return message_is_taken; });
 }
 
 void MessageBuffer::assign_async(Message* message) {
@@ -30,10 +34,12 @@ Message* MessageBuffer::take() {
     unique_lock<mutex> buffer_lck{buffer_mtx};
     message_takable.wait(buffer_lck, [this](){ return message_assigned; });
 
-    message_is_taken = true;
     message_assigned = false;
-    message_taken.notify_one();
     message_assignable.notify_one();
+
+    lock_guard<mutex> rendezvous_lck{rendezvous_mtx};
+    message_is_taken = true;
+    message_taken.notify_one();
 
     return message;
 }
