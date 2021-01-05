@@ -34,7 +34,8 @@ class Logger: public Presenter {
     virtual void ring_stopped() override;
 
     virtual void worker_created(unsigned int worker_id, unsigned int position) override;
-    virtual void worker_stopped(unsigned int worker_id, unsigned int position) override;
+    virtual void worker_started(unsigned int position) override;
+    virtual void worker_stopped(unsigned int position) override;
 
     virtual void worker_got_message(unsigned int worker_id, Message* message) override;
     virtual void worker_says(unsigned int worker_id, const std::string& message) override;
@@ -48,6 +49,10 @@ class Logger: public Presenter {
     virtual void worker_resigns_as_leader(unsigned int worker_id) override;
 
     virtual void election_is_finished(unsigned int leader_id) override;
+
+    virtual void worker_recognizes_dead_neighbour(unsigned int worker_id, unsigned int neighbour_position) override;
+    virtual void worker_removes_neighbour(unsigned int worker_id, unsigned int neighbour_position) override;
+    virtual void worker_adds_neighbour(unsigned int worker_id, unsigned int neighbour_position) override;
 
     virtual ~Logger();
 };

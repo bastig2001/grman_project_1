@@ -17,7 +17,8 @@ class Presenter {
     virtual void ring_stopped() = 0;
 
     virtual void worker_created(unsigned int worker_id, unsigned int position) = 0;
-    virtual void worker_stopped(unsigned int worker_id, unsigned int position) = 0;
+    virtual void worker_started(unsigned int position) = 0;
+    virtual void worker_stopped(unsigned int position) = 0;
 
     virtual void worker_got_message(unsigned int worker_id, Message* message) = 0;
     virtual void worker_says(unsigned int worker_id, const std::string& message) = 0;
@@ -31,6 +32,10 @@ class Presenter {
     virtual void worker_resigns_as_leader(unsigned int worker_id) = 0;
 
     virtual void election_is_finished(unsigned int leader_id) = 0;
+
+    virtual void worker_recognizes_dead_neighbour(unsigned int worker_id, unsigned int neighbour_position) = 0;
+    virtual void worker_removes_neighbour(unsigned int worker_id, unsigned int neighbour_position) = 0;
+    virtual void worker_adds_neighbour(unsigned int worker_id, unsigned int neighbour_position) = 0;
 
     virtual ~Presenter() = default;
 };

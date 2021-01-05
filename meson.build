@@ -1,6 +1,6 @@
 project('grman_project_1', 'cpp',
         license : ['Boost'],
-        version : '0.1',
+        version : '0.2',
         default_options : ['cpp_std=c++17', 'warning_level=3', 'werror=true'])
 
 thread_dep = dependency('threads')
@@ -32,13 +32,18 @@ add_global_arguments('-I' + get_option('toml_include_dir'), language : 'cpp')
 inc_dir = include_directories('include')
 
 src = [
-    'src/message_buffer.cpp', 
-    'src/messages.cpp', 
+    'src/message_buffer.cpp',
     'src/worker.cpp', 
     'src/ring.cpp',
     'src/config.cpp',
     'src/presenters/logger.cpp',
     'src/presenters/console_writer.cpp'
+]
+
+unit_tests_src = [
+    'src/test_main.cpp',
+    'src/unit_tests/worker_tests.cpp',
+    'src/unit_tests/message_buffer_tests.cpp'
 ]
 
 executable('ring_voting',
@@ -48,7 +53,7 @@ executable('ring_voting',
           )
 
 executable('unit_tests',
-           sources : ['src/test_main.cpp'] + src,
+           sources : unit_tests_src + src,
            include_directories : inc_dir,
            dependencies : [thread_dep, fmt, spdlog, catch2],
            cpp_args: '-DUNIT_TEST'

@@ -24,7 +24,8 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
     app.add_option(
         "size", 
         config.number_of_workers, 
-        "Positive Number of Workers in the Ring"
+        "Positive Number of Workers in the Ring\n"
+            "  This value needs to be provided either by CLI or config file"
     )->check(CLI::PositiveNumber);
     app.add_option(
         "-c, --config",
@@ -48,7 +49,7 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
     app.add_option(
         "--worker-sleep",
         config.worker_sleeptime,
-        "Sleeptime of each worker after a finishing an operation in milliseconds\n"
+        "Sleeptime of each worker after finishing an operation in milliseconds\n"
             "  Default is a sleeptime of 500 milliseconds"
     );
     app.add_flag(

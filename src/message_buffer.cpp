@@ -1,13 +1,33 @@
 #include "message_buffer.h"
 
 #include <thread>
+#include <chrono>
 
 using namespace std;
 
 
-void MessageBuffer::assign(Message* message) {
-    unique_lock<mutex> lck{mtx};
-    message_assignable.wait(lck, [this](){ return !message_assigned; });
+bool MessageBuffer::assign_sync(Message* message, unsigned int waittime) {
+    // only one thread at a time is allowed to synchronously assign
+    lock_guard<mutex> assign_sync_lck{assign_sync_mtx};
+
+    unique_lock<mutex> rendezvous_lck{rendezvous_mtx}; 
+    message_is_taken = false;
+    rendezvous_lck.unlock();
+
+    // rendezvous_lck beeing locked during assignment could cause a deadlock 
+    //      in combination with another assign_async call and take
+    assign_async(message);
+
+    rendezvous_lck.lock();
+    return message_taken.wait_for(
+        rendezvous_lck, chrono::milliseconds(waittime), 
+        [this](){ return message_is_taken; }
+    );
+}
+
+void MessageBuffer::assign_async(Message* message) {
+    unique_lock<mutex> buffer_lck{buffer_mtx};
+    message_assignable.wait(buffer_lck, [this](){ return is_empty(); });
 
     this->message = message;
     message_assigned = true;
@@ -15,74 +35,19 @@ void MessageBuffer::assign(Message* message) {
 }
 
 Message* MessageBuffer::take() {
-    unique_lock<mutex> lck{mtx};
-    message_takable.wait(lck, [this](){ return message_assigned; });
+    unique_lock<mutex> buffer_lck{buffer_mtx};
+    message_takable.wait(buffer_lck, [this](){ return message_assigned; });
 
     message_assigned = false;
     message_assignable.notify_one();
+
+    lock_guard<mutex> rendezvous_lck{rendezvous_mtx};
+    message_is_taken = true;
+    message_taken.notify_one();
+
     return message;
 }
 
-
-#ifdef UNIT_TEST
-#include "catch2/catch.hpp"
-#include <chrono>
-
-TEST_CASE(
-    "Message Buffer controls and secures access to its contained Message", 
-    "[message_buffer][messages]"
-) {
-    auto buffer{MessageBuffer()};
-    
-    SECTION("messages can't be assigned twice without them beeing taken first") {
-        buffer.assign(new NoMessage());
-        bool message_taken{false};
-
-        thread t{[&](){
-            this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.take();
-            message_taken = true;
-        }};
-
-        buffer.assign(new NoMessage());
-
-        CHECK(message_taken);
-
-        t.join();
-        buffer.take();
-    }
-
-    SECTION("messages can't be taken before they haven't been assigned first") {
-        bool message_assigned{false};
-
-        thread t{[&](){
-            this_thread::sleep_for(chrono::milliseconds(100));
-            buffer.assign(new NoMessage());
-            message_assigned = true;
-        }};
-
-        buffer.take();
-
-        CHECK(message_assigned);
-
-        t.join();
-    }
-
-    SECTION("messages don't change; assigned message == taken message") {
-        string log_msg_content{ 
-            GENERATE(
-                "buffer test message",
-                "Hello, World!"
-            )
-        };
-
-        buffer.assign(new LogMessage(log_msg_content));
-
-        auto taken_message{buffer.take()};
-
-        REQUIRE(taken_message->type == MessageType::LogMessage);
-        CHECK(taken_message->cast_to<LogMessage>()->content == log_msg_content);
-    }
+bool MessageBuffer::is_empty() {
+    return !message_assigned;
 }
-
-#endif

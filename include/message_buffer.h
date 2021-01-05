@@ -4,7 +4,6 @@
 
 #include <condition_variable>
 #include <mutex>
-#include <memory>
 
 // A Message Buffer, which holds at most one element, 
 // meant for Communication between Workers.
@@ -12,18 +11,29 @@ class MessageBuffer {
   private:
     Message* message;
     bool message_assigned{false};
-    std::mutex mtx;
-    std::condition_variable message_takable;
-    std::condition_variable message_assignable;
+    bool message_is_taken{}; // similar to not message_assigned but meant for assign_sync
+    std::mutex buffer_mtx, rendezvous_mtx, assign_sync_mtx;
+    std::condition_variable message_takable;    // if there is a message to be taken
+    std::condition_variable message_taken;      // if the message is taken (for assign_sync)
+    std::condition_variable message_assignable; // if a message can be assigned
 
   public:
     // Assigns a a given Message to the Buffer.
+    // Blocks until the Message has been taken or it times out.
+    // Waittime is in milliseconds.
+    // If it times out, it returns false otherwise true
+    bool assign_sync(Message* message, unsigned int waittime);
+
+    // Assigns a a given Message to the Buffer.
     // Blocks when the previously assigned Message  
     //   hasn't been taken yet, until it is taken.
-    void assign(Message* message);
+    void assign_async(Message* message);
 
     // Returns the Message the Buffer holds;
     // Blocks when there is no Message assigned after 
     //   the last one has been taken, until there is.
     Message* take();
+
+    // Returns if the Buffer has no Message
+    bool is_empty();
 };

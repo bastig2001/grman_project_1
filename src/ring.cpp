@@ -19,22 +19,39 @@ Ring::Ring(
     }
     this->presenter = presenter;
 
+    create_workers(number_of_workers, worker_sleeptime);
+    set_worker_neighbours();
+
+    presenter->ring_created(number_of_workers);
+}
+
+void Ring::create_workers(
+    size_t number_of_workers, 
+    unsigned int worker_sleeptime
+) {
     workers.reserve(number_of_workers);
     auto ids{get_unique_ids(number_of_workers)};
     
-    if (number_of_workers > 0) {
+    for (unsigned int i{0}; i < number_of_workers; i++) {
         workers.push_back(
-            new Worker(ids[0], worker_sleeptime, presenter)
+            new Worker(ids[i], i, worker_sleeptime, presenter)
         );
-        for (unsigned int i{1}; i < number_of_workers; i++) {
-            workers.push_back(
-                new Worker(ids[i], worker_sleeptime, presenter, workers[i - 1])
-            );
-        }
-        workers[0]->set_neighbour(workers[number_of_workers - 1]);
+        presenter->worker_created(ids[i], i);
     }
+}
 
-    presenter->ring_created(number_of_workers);
+void Ring::set_worker_neighbours() {
+    for (auto it{workers.begin()}; it < workers.end(); it++) {
+        auto first_neighbour{
+            it + 1 == workers.end()
+            ? workers.begin()
+            : it + 1
+        };
+        vector<Worker*> neighbours{first_neighbour, workers.end()};
+        neighbours.insert(neighbours.end(), workers.begin(), it + 1);
+
+        (*it)->set_neighbours(move(neighbours));
+    }
 }
 
 vector<unsigned int> get_unique_ids(size_t number_of_ids) {
@@ -70,6 +87,7 @@ void Ring::start() {
 
     for (unsigned int i{0}; i < workers.size(); i++) {
         worker_threads.push_back(thread{ref(*workers[i])});
+        presenter->worker_started(i);
     }
 
     presenter->ring_started();
@@ -77,7 +95,7 @@ void Ring::start() {
 
 void Ring::start_election() {
     if (worker_threads.size() > 0) {
-        workers[0]->assign_message(new StartElection());
+        workers[0]->assign_message_async(new StartElection());
     }
 }
 
@@ -89,8 +107,9 @@ void Ring::stop() {
             && 
             workers[i]->is_running()
         ) {
-            workers[i]->assign_message(new Stop());
+            workers[i]->assign_message_async(new Stop());
             worker_threads[i].join();
+            presenter->worker_stopped(i);
         }
     }
 

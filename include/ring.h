@@ -14,6 +14,12 @@ class Ring {
     Presenter* presenter;
     bool running{false};
 
+    void create_workers(
+        size_t number_of_workers, 
+        unsigned int worker_sleeptime
+    );
+    void set_worker_neighbours();
+
   public:
     Ring(
         size_t number_of_workers, 

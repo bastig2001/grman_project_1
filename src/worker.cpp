@@ -1,24 +1,37 @@
 #include "worker.h"
+#include "messages.h"
 #include "presenters/no_presenter.h"
 
 #include <spdlog/spdlog.h>
 #include <chrono>
 #include <stdexcept>
 #include <thread>
+#include <cmath>
 
 using namespace std;
 
 
-void Worker::assign_message(Message* message) {
-    message_buffer.assign(message);
+bool Worker::assign_message_sync(Message* message) {
+    // 1 worker sleeptime should be expected at least
+    // 2 because it might get a message from the Ring
+    // 2.5 because there are processes besides just sleeping
+    // The waittime is at least 1s.
+    return message_buffer.assign_sync(
+        message, 
+        max(1000u, (unsigned int)(sleeptime * 2.5))
+    );
 }
 
-void Worker::set_neighbour(Worker* neighbour) {
-    if (neighbour) {
-        this->neighbour = neighbour;
+void Worker::assign_message_async(Message* message) {
+    message_buffer.assign_async(message);
+}
+
+void Worker::set_neighbours(vector<Worker*> neighbours) {
+    if (neighbours.size() > 0) {
+        this->neighbours = neighbours;
     }
     else {
-        throw invalid_argument("Neighbour must point to a valid Worker object.");
+        throw invalid_argument("There must be at least on neighbour to which to send.");
     }
 }
 
@@ -45,12 +58,12 @@ Worker::~Worker() {
 }
 
 void Worker::operator()() {
-    if (neighbour) {
+    if (neighbours.size() > 0) {
         running = true;
 
         bool continue_operation{true};
         while (continue_operation) {
-            this_thread::sleep_for(sleeptime);
+            this_thread::sleep_for(chrono::milliseconds(sleeptime));
             continue_operation = act_upon_message(message_buffer.take());
         }
 
@@ -78,6 +91,12 @@ ContinueOperation Worker::act_upon_message(Message* message) {
             break;
         case MessageType::Stop:
             continue_operation = false;
+            break;
+        case MessageType::DeadWorker:
+            handle_dead_worker(message->cast_to<DeadWorker>());
+            break;
+        case MessageType::NewWorker:
+            add_new_worker(message->cast_to<NewWorker>());
             break;
         case MessageType::NoMessage:
             break;
@@ -128,7 +147,7 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 
 void Worker::forward_election_proposal(ElectionProposal* proposal) {
     presenter->worker_forwards_election_proposal(id, proposal->id);
-    neighbour->assign_message(new ElectionProposal(proposal->id));
+    send_to_neighbour(new ElectionProposal(*proposal));
 }
 
 void Worker::be_elected() {
@@ -138,12 +157,12 @@ void Worker::be_elected() {
     presenter->worker_stops_election_participation(id);
     participates_in_election = false;
 
-    neighbour->assign_message(new Elected(id));
+    send_to_neighbour(new Elected(id));
 }
 
 void Worker::propose_oneself() {
     presenter->worker_proposes_itself_in_election(id);
-    neighbour->assign_message(new ElectionProposal(id));
+    send_to_neighbour(new ElectionProposal(id));
 }
 
 void Worker::end_election(Elected* elected) {
@@ -154,6 +173,93 @@ void Worker::end_election(Elected* elected) {
         presenter->worker_stops_election_participation(id);
         participates_in_election = false;
 
-        neighbour->assign_message(new Elected(elected->id));
+        send_to_neighbour(new Elected(elected->id));
     }
+}
+
+void Worker::handle_dead_worker(DeadWorker* dead_worker) {
+    if (dead_worker->position != get_direct_neighbour_position()) {
+        remove_dead_worker(dead_worker->position);
+    }
+    // When the position is its neighbour, 
+    // the dead worker has been already removed, 
+    // because only the preceding neighbour can know if a worker is dead 
+    // and must therefore be the first to recognize and remove it.
+}
+
+void Worker::add_new_worker(NewWorker* new_worker) {
+    unsigned int new_neighbour_index{
+        get_neighbours_index_for_position(new_worker->position)
+    };
+
+    if (*neighbours[new_neighbour_index] != *new_worker->worker) {
+        presenter->worker_adds_neighbour(id, new_worker->position);
+
+        neighbours.insert(
+            neighbours.begin() + new_neighbour_index, 
+            new_worker->worker
+        );
+
+        if (new_worker->position <= position) {
+            position++; // update position when necessary
+        }
+
+        send_to_neighbour(new NewWorker(*new_worker));
+    }
+    // If the new worker and the neighbour at the index for the new worker 
+    // are the same, the new worker has already been inserted 
+    // and there is nothing left to do
+}
+
+void Worker::send_to_neighbour(Message* message) {
+    if (previous_message_sent.valid() && !previous_message_sent.get()) {
+        // previous message still hasn't been retrieved by neighbour,
+        // neighbour is considered dead
+        unsigned int neighbour_position{get_direct_neighbour_position()};
+        presenter->worker_recognizes_dead_neighbour(id, neighbour_position);
+        remove_dead_worker(neighbour_position);
+    }
+
+    previous_message_sent = async(
+        [message{message}, this](){ 
+            return neighbours[0]->assign_message_sync(message); 
+        }
+    );
+}
+
+void Worker::remove_dead_worker(unsigned int position) {
+    presenter->worker_removes_neighbour(id, position);
+
+    neighbours.erase(
+        neighbours.begin() 
+            + 
+        get_neighbours_index_for_position(position)
+    );
+
+    if (position < this->position) {
+        this->position--; // update position when necessary
+    }
+
+    send_to_neighbour(new DeadWorker(position));
+}
+
+unsigned int Worker::get_direct_neighbour_position() {
+    return (position + 1) % neighbours.size();
+}
+
+unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
+    if (position > this->position) {
+        return position - this->position - 1;
+    }
+    else {
+        return position - this->position - 1 + neighbours.size();
+    }
+}
+
+bool Worker::operator==(const Worker& other_worker) {
+    return id == other_worker.id;
+}
+
+bool Worker::operator!=(const Worker& other_worker) {
+    return !(*this == other_worker);
 }
