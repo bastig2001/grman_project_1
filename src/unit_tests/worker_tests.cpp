@@ -145,8 +145,8 @@ TEST_CASE(
     "Worker interacts with its neighbours and can detect and correct faults in the ring", 
     "[worker][uses_message_buffer][worker_fault_tolerance]"
 ) {
-    unsigned int number_of_neighbours{GENERATE(11, 15)};
-    unsigned int worker_position{GENERATE(0, 1, 4, 11)};
+    unsigned int number_of_neighbours{GENERATE(11u, 15u)};
+    unsigned int worker_position{GENERATE(0u, 1u, 4u, 11u)};
 
     Worker dummy_worker(0, 0, 0, nullptr);
     Worker worker(0, worker_position, 0, nullptr);
@@ -162,7 +162,7 @@ TEST_CASE(
     REQUIRE(worker.is_running());
     
     SECTION("Worker is able to remove dead neighbour") {
-        unsigned int dead_worker_position{GENERATE(3, 9)};
+        unsigned int dead_worker_position{GENERATE(3u, 9u)};
         worker.assign_message_async(new DeadWorker(dead_worker_position));
         sleep();
 
@@ -189,7 +189,7 @@ TEST_CASE(
 
     SECTION("Worker is able to add a new worker to its neighbours on correct index") {
         Worker other_worker(1, 0, 0, nullptr);
-        unsigned int new_worker_position{GENERATE(3, 9)};
+        unsigned int new_worker_position{GENERATE(3u, 9u)};
         unsigned int expected_new_worker_index{
             worker.get_neighbours_index_for_position(new_worker_position)
         };
