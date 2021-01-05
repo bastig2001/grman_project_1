@@ -36,6 +36,7 @@ void Ring::create_workers(
         workers.push_back(
             new Worker(ids[i], i, worker_sleeptime, presenter)
         );
+        presenter->worker_created(ids[i], i);
     }
 }
 
@@ -86,6 +87,7 @@ void Ring::start() {
 
     for (unsigned int i{0}; i < workers.size(); i++) {
         worker_threads.push_back(thread{ref(*workers[i])});
+        presenter->worker_started(i);
     }
 
     presenter->ring_started();
@@ -107,6 +109,7 @@ void Ring::stop() {
         ) {
             workers[i]->assign_message_async(new Stop());
             worker_threads[i].join();
+            presenter->worker_stopped(i);
         }
     }
 

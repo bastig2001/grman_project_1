@@ -24,4 +24,6 @@ class ConsoleWriter: public Logger {
     void worker_is_elected(unsigned int worker_id) override;
 
     void election_is_finished(unsigned int leader_id) override;
+
+    void worker_recognizes_dead_neighbour(unsigned int worker_id, unsigned int neighbour_position) override;
 };

@@ -163,10 +163,16 @@ TEST_CASE(
     
     SECTION("Worker is able to remove dead neighbour") {
         unsigned int dead_worker_position{GENERATE(3u, 9u)};
+        unsigned int expected_worker_position{worker.position};
+        if (expected_worker_position > dead_worker_position) {
+            expected_worker_position--;
+        }
+
         worker.assign_message_sync(new DeadWorker(dead_worker_position));
         sleep();
 
         CHECK(worker.neighbours.size() == number_of_workers - 1);
+        CHECK(worker.position == expected_worker_position);
         REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};
@@ -180,10 +186,13 @@ TEST_CASE(
         unsigned int neighbour_position{
             (worker_position + 1) % number_of_workers
         };
+        unsigned int expected_worker_position{worker.position};
+
         worker.assign_message_sync(new DeadWorker(neighbour_position));
         sleep();
 
         CHECK(worker.neighbours.size() == number_of_workers);
+        CHECK(worker.position == expected_worker_position);
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
@@ -193,6 +202,11 @@ TEST_CASE(
         unsigned int expected_new_worker_index{
             worker.get_neighbours_index_for_position(new_worker_position)
         };
+        unsigned int expected_worker_position{worker.position};
+        if (expected_worker_position >= new_worker_position) {
+            expected_worker_position++;
+        }
+
         worker.assign_message_sync(
             new NewWorker(new_worker_position, &other_worker)
         );
@@ -200,6 +214,7 @@ TEST_CASE(
 
         CHECK(worker.neighbours.size() == number_of_workers + 1);
         CHECK(worker.neighbours[expected_new_worker_index]->id == other_worker.id);
+        CHECK(worker.position == expected_worker_position);
         REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
         auto message{dummy_worker.message_buffer.take()};

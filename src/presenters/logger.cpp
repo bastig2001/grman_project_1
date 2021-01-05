@@ -39,8 +39,12 @@ void Logger::worker_created(unsigned int worker_id, unsigned int position) {
     logger->debug("The Worker with the id {} has been created on position {}.", worker_id, position);
 }
 
-void Logger::worker_stopped(unsigned int worker_id, unsigned int position) {
-    logger->debug("The Worker with the id {} on position {} has been stopped.", worker_id, position);
+void Logger::worker_started(unsigned int position) {
+    logger->debug("The Worker on position {} has been started.", position);
+}
+
+void Logger::worker_stopped(unsigned int position) {
+    logger->debug("The Worker with on position {} has been stopped.", position);
 }
 
 void Logger::worker_got_message(unsigned int worker_id, Message* message) {
@@ -85,4 +89,16 @@ void Logger::worker_resigns_as_leader(unsigned int worker_id) {
 
 void Logger::election_is_finished(unsigned int leader_id) {
     logger->info("The election is finished. Worker {} is the leader.", leader_id);
+}
+
+void Logger::worker_recognizes_dead_neighbour(unsigned int worker_id, unsigned int neighbour_position) {
+    logger->info("Worker {} recognizes his neighbour on position {} isn't responding.", worker_id, neighbour_position);
+}
+
+void Logger::worker_removes_neighbour(unsigned int worker_id, unsigned int neighbour_position) {
+    logger->debug("Worker {} removes neighbour on position {}.", worker_id, neighbour_position);
+}
+
+void Logger::worker_adds_neighbour(unsigned int worker_id, unsigned int neighbour_position) {
+    logger->debug("Worker {} adds a new neighbour on position {}.", worker_id, neighbour_position);
 }

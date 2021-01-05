@@ -112,6 +112,17 @@ void ConsoleWriter::election_is_finished(unsigned int leader_id) {
     );
 }
 
+void ConsoleWriter::worker_recognizes_dead_neighbour(unsigned int worker_id, unsigned int neighbour_position) {
+    if (logs_to_file()) {
+        Logger::worker_recognizes_dead_neighbour(worker_id, neighbour_position);
+    }
+
+    print(
+        "Worker {} recognizes his neighbour on position {} is {}.\n",
+        worker_id, neighbour_position, format(fg(color::red), "dead")
+    );
+}
+
 ConsoleWriter::~ConsoleWriter() {
     print("\n"); // print and flush nothing just to reset cursor colour
 }

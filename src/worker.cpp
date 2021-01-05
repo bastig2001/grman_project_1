@@ -193,10 +193,16 @@ void Worker::add_new_worker(NewWorker* new_worker) {
     };
 
     if (*neighbours[new_neighbour_index] != *new_worker->worker) {
+        presenter->worker_adds_neighbour(id, new_worker->position);
+
         neighbours.insert(
             neighbours.begin() + new_neighbour_index, 
             new_worker->worker
         );
+
+        if (new_worker->position <= position) {
+            position++; // update position when necessary
+        }
 
         send_to_neighbour(new NewWorker(*new_worker));
     }
@@ -209,7 +215,9 @@ void Worker::send_to_neighbour(Message* message) {
     if (previous_message_sent.valid() && !previous_message_sent.get()) {
         // previous message still hasn't been retrieved by neighbour,
         // neighbour is considered dead
-        remove_dead_worker(get_direct_neighbour_position());
+        unsigned int neighbour_position{get_direct_neighbour_position()};
+        presenter->worker_recognizes_dead_neighbour(id, neighbour_position);
+        remove_dead_worker(neighbour_position);
     }
 
     previous_message_sent = async(
@@ -220,11 +228,17 @@ void Worker::send_to_neighbour(Message* message) {
 }
 
 void Worker::remove_dead_worker(unsigned int position) {
+    presenter->worker_removes_neighbour(id, position);
+
     neighbours.erase(
         neighbours.begin() 
             + 
         get_neighbours_index_for_position(position)
     );
+
+    if (position < this->position) {
+        this->position--; // update position when necessary
+    }
 
     send_to_neighbour(new DeadWorker(position));
 }

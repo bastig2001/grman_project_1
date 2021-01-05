@@ -14,7 +14,8 @@ class NoPresenter: public Presenter {
     void ring_stopped() override {}
 
     void worker_created(unsigned int, unsigned int) override {}
-    void worker_stopped(unsigned int, unsigned int) override {}
+    void worker_started(unsigned int) override {}
+    void worker_stopped(unsigned int) override {}
 
     void worker_got_message(unsigned int, Message*) override {}
     void worker_says(unsigned int, const std::string&) override {}
@@ -28,4 +29,8 @@ class NoPresenter: public Presenter {
     void worker_resigns_as_leader(unsigned int) override {}
 
     void election_is_finished(unsigned int) override {}
+
+    void worker_recognizes_dead_neighbour(unsigned int, unsigned int) override {}
+    void worker_removes_neighbour(unsigned int, unsigned int) override {}
+    void worker_adds_neighbour(unsigned int, unsigned int) override {}
 };
