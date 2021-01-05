@@ -218,4 +218,42 @@ TEST_CASE(
     worker_thread.join();
 }
 
+TEST_CASE(
+    "Worker computation functions work as expected"
+    "[worker][worker_computations]"
+) {
+    unsigned int number_of_workers{12};
+    unsigned int worker_position{3};
+
+    Worker worker(0, worker_position, 0, nullptr);
+    
+    vector<Worker*> neighbours{};
+    neighbours.assign(number_of_workers, &worker);
+    worker.set_neighbours(move(neighbours));
+
+    SECTION("Worker is able to calculate the index for a neighbour position") {
+        tuple<unsigned int, unsigned int> pos_idx_pair{GENERATE(
+            tuple<unsigned int, unsigned int>{5, 1}, 
+            tuple<unsigned int, unsigned int>{2, 10},
+            tuple<unsigned int, unsigned int>{3, 11},
+            tuple<unsigned int, unsigned int>{0, 8},
+            tuple<unsigned int, unsigned int>{11, 7}
+        )}; 
+        unsigned int position{get<0>(pos_idx_pair)};
+        unsigned int index{get<1>(pos_idx_pair)};
+        
+        CHECK(worker.get_neighbours_index_for_position(position) == index);
+    }
+
+    SECTION("Worker knows the position of its neighbour") {
+        unsigned int number_of_workers{GENERATE(4u, 7u, 12u)};
+
+        vector<Worker*> neighbours{};
+        neighbours.assign(number_of_workers, &worker);
+        worker.set_neighbours(move(neighbours));
+
+        CHECK(worker.get_direct_neighbour_position() == (worker_position + 1) % number_of_workers);
+    }
+}
+
 #endif // UNIT_TEST
