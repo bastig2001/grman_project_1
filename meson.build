@@ -1,6 +1,6 @@
 project('grman_project_1', 'cpp',
         license : ['Boost'],
-        version : '0.2',
+        version : '0.3',
         default_options : ['cpp_std=c++17', 'warning_level=3', 'werror=true'])
 
 thread_dep = dependency('threads')
@@ -37,7 +37,8 @@ src = [
     'src/ring.cpp',
     'src/config.cpp',
     'src/presenters/logger.cpp',
-    'src/presenters/console_writer.cpp'
+    'src/presenters/console_writer.cpp',
+    'src/presenters/command_line.cpp'
 ]
 
 unit_tests_src = [
