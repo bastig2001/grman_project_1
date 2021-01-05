@@ -6,8 +6,8 @@
 #include <thread>
 
 // sleep is needed since multiple threads are used
-#define sleep() this_thread::sleep_for(chrono::milliseconds(25))
-#define sleep_more(multiplier) this_thread::sleep_for(chrono::milliseconds(25 * multiplier))
+#define sleep() this_thread::sleep_for(chrono::milliseconds(20))
+#define sleep_more(multiplier) this_thread::sleep_for(chrono::milliseconds(20 * multiplier))
 
 using namespace std;
 

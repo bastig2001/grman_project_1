@@ -7,7 +7,7 @@
 #include <thread>
 
 // sleep is needed since there is another thread
-#define sleep() this_thread::sleep_for(chrono::milliseconds(25))
+#define sleep() this_thread::sleep_for(chrono::milliseconds(20))
 
 using namespace std;
 
