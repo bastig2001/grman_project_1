@@ -1,5 +1,6 @@
 #include "config.h"
 #include "presenters/console_writer.h"
+#include "presenters/command_line.h"
 
 #include "CLI11.hpp"
 #include "toml.hpp"
@@ -38,7 +39,8 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
         "-n, --number-of-elections",
         config.number_of_elections,
         "Number of Elections after which to finish\n"
-            "  Default 0 is infinit"
+            "  Default 0 is infinit, except --command-line is used, in which case "
+              "it immediately goes to the command line without starting an election."
     );
     app.add_option(
         "--sleep",
@@ -85,7 +87,11 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
         config.no_config_log,
         "Abstain from logging the used config as a DEBUG message"
     );
-
+    app.add_flag(
+        "--command-line",
+        config.use_command_line,
+        "Use a command line to tell when to start an election and manipulate workers"
+    );
     
     CLI11_PARSE(app, argc, argv);
 
@@ -119,7 +125,7 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
 
 int get_file_config(const string& file_name, Config& config) {
     try {
-        auto file_config = toml::parse_file(file_name);
+        auto file_config{toml::parse_file(file_name)};
 
         config.number_of_workers = 
             file_config["ring"]["size"]
@@ -164,7 +170,16 @@ int get_file_config(const string& file_name, Config& config) {
 }
 
 Presenter* get_and_start_presenter(const Config& config) {
-    return new ConsoleWriter(get_and_start_logger(config), config.is_file_logger);
+    auto console_writer{
+        new ConsoleWriter(get_and_start_logger(config), config.is_file_logger)
+    };
+
+    if (config.use_command_line) {
+        return new CommandLine(console_writer);
+    } 
+    else {
+        return console_writer;
+    }
 }
 
 shared_ptr<spdlog::logger> get_and_start_logger(const Config& config) {

@@ -17,6 +17,7 @@ struct Config {
     spdlog::level::level_enum logging_level{spdlog::level::off};
     bool no_config_log{false};
     bool is_file_logger{};
+    bool use_command_line{false};
 
     operator std::string() const;
 };

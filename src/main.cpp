@@ -1,5 +1,6 @@
 #include "ring.h"
 #include "config.h"
+#include "presenters/command_line.h"
 
 #include <thread>
 #include <chrono>
@@ -29,6 +30,12 @@ int main(int argc, char* argv[]) {
 void run_ring(const Config& config, Presenter* presenter) {
     Ring ring(config.number_of_workers, config.worker_sleeptime, presenter);
 
+    auto command_line{dynamic_cast<CommandLine*>(presenter)};
+    if (command_line) {
+        command_line->set_ring(&ring);
+        command_line->start();
+    }
+
     ring.start();
     
     chrono::milliseconds sleeptime{config.after_election_sleeptime};
@@ -41,6 +48,10 @@ void run_ring(const Config& config, Presenter* presenter) {
         while (true) {
             cycle(ring, sleeptime);
         }
+    }
+
+    if (command_line) {
+        command_line->stop();
     }
 
     ring.stop();

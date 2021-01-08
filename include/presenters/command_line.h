@@ -3,6 +3,10 @@
 #include "presenters/presenter.h"
 #include "ring.h"
 
+#include <thread>
+#include <mutex>
+#include <sstream>
+
 // A Presenter that provides a command line to interact with the Ring.
 // Outputs are written with the given Presenter.
 class CommandLine: public Presenter {
@@ -10,12 +14,33 @@ class CommandLine: public Presenter {
     Presenter* output_writer;
     Ring* ring;
 
+    bool running{false};
+    std::thread command_line_thread;
+    std::mutex output_mtx;
+
+    std::ostringstream input_buffer{};
+
     void set_output_writer(Presenter* output_writer);
 
+    void clear_line();
+    void print_prompt_and_user_input();
+
   public:
-    CommandLine(Presenter* output_writer, Ring* ring): ring{ring} {
+    CommandLine(Presenter* output_writer) {
         set_output_writer(output_writer);
     }
+
+    void set_ring(Ring* ring);
+
+    // Starts the Command Line
+    // Returns true when it started successfully
+    // Command Line doesn't start and it returns false, when ring isn't set.
+    bool start();
+
+    // Stops the Command Line
+    void stop();
+
+    void operator()();
 
     void log(spdlog::level::level_enum log_level, const std::string& message) override;
 
