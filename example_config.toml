@@ -1,6 +1,8 @@
 # This is an example config file
 # All options can be also set with the CLI. Their meaning is the same
 
+command_line = false    # default is false
+
 [ring]
 size = 5                # needs to be set here or in the CLI
 number_of_elections = 3 # default 0 is infinit

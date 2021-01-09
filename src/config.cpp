@@ -154,6 +154,10 @@ int get_file_config(const string& file_name, Config& config) {
         config.no_config_log =
             file_config["log"]["no_config_log"]
             .value_or(config.no_config_log);
+
+        config.use_command_line =
+            file_config["command_line"]
+            .value_or(config.use_command_line);
     }
     catch (const toml::parse_error& err) {
         cerr << "Parsing the Toml config file failed:\n" << err << endl;
