@@ -81,7 +81,7 @@ void ConsoleWriter::worker_discards_election_proposal(unsigned int worker_id, un
         "Worker {} {} the election proposal for Worker {}.\n",
         worker_id, 
         format(emphasis::underline, "discards"), 
-        format(fg(color::dark_red), "{}", proposal_id)
+        format(fg(color::fire_brick), "{}", proposal_id)
     );
 }
 
@@ -93,7 +93,7 @@ void ConsoleWriter::worker_is_elected(unsigned int worker_id) {
     print(
         "Worker {} {}.\n",
         format(fg(color::green), "{}", worker_id), 
-        format(emphasis::underline | fg(color::dark_green), "has been elected")
+        format(emphasis::underline | fg(color::green), "has been elected")
     );
 }
 
@@ -106,7 +106,7 @@ void ConsoleWriter::election_is_finished(unsigned int leader_id) {
         fg(color::gold),
         "The election is finished. {} is the leader.\n",
         format(
-            fg(color::green) | emphasis::underline | emphasis::bold, 
+            fg(color::fuchsia) | emphasis::underline | emphasis::bold, 
             "Worker {}", leader_id
         )
     );
