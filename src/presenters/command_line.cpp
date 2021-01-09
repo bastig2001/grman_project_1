@@ -1,6 +1,8 @@
 #include "presenters/command_line.h"
 #include "presenters/no_presenter.h"
 
+#include "peglib.h"
+#include <any>
 #include <iostream>
 #include <termios.h>
 #include <unistd.h>
@@ -40,14 +42,11 @@ bool CommandLine::start() {
 }
 
 void CommandLine::stop() {
-    lock_guard<mutex> running_status_lck{running_status_mtx};
-    running = false;
+    exit();
 
     if (command_line_thread.joinable()) {
         command_line_thread.join();
     }
-
-    quitted.notify_all();
 }
 
 void CommandLine::wait() {
@@ -93,6 +92,7 @@ void CommandLine::operator()() {
 }
 
 void CommandLine::handle_input_key(char input_char) {
+
     if (in_esc_mode) {
         handle_input_key_in_esc_mode(input_char);        
     }
@@ -135,6 +135,9 @@ void CommandLine::handle_input_key_in_regular_mode(char input_char) {
             break;
         case '\n':
             handle_newline();
+            break;
+        case 4: // ^D
+            exit();
             break;
         default:
             write_char(input_char);
@@ -220,8 +223,121 @@ void CommandLine::write_user_input_new(unsigned int index) {
          << flush; 
 }
 
-void CommandLine::execute_command(const std::string&) {
+using namespace peg;
+
+void CommandLine::define_command_parser() {
+    command_parser = (R"(
+        Procedure     <- Help / List / Exit / StartElection / Stop / Start / Remove
+        Help          <- 'h' / 'help'
+        List          <- 'show' / 'list' / 'ls'
+        Exit          <- 'q' / 'quit' / 'exit'
+        StartElection <- 'start-election' (Id / Pos)?
+        Stop          <- 'stop' (Id / Pos)*
+        Start         <- 'start' (Id / Pos)*
+        Remove        <- ('remove' / 'rm') (Id / Pos)+
+        Id            <- 'id'? Number
+        Pos           <- 'pos' Number
+        Number        <- < [0-9]+ >
+
+        %whitespace   <- [ \t]*
+    )");
+
+    command_parser["Help"] = 
+        [this](const SemanticValues&){ print_help(); };
+    command_parser["List"] = 
+        [this](const SemanticValues&){ list_workers(); };
+    command_parser["Exit"] = 
+        [this](const SemanticValues&){ exit(); };
+    command_parser["StartElection"] = 
+        [this](const SemanticValues& values){ start_election(values); };
+    command_parser["StartElection"] = 
+        [this](const SemanticValues& values){ stop_ring_or_worker(values); };
+    command_parser["StartElection"] = 
+        [this](const SemanticValues& values){ start_ring_or_worker(values); };
+    command_parser["StartElection"] = 
+        [this](const SemanticValues& values){ remove_worker(values); };
+    command_parser["Id"] = 
+        [](const SemanticValues& values){ 
+            return WorkerIdentifier{
+                WorkerIdentifierType::Id,
+                any_cast<unsigned int>(values[values.size() - 1]),
+            };
+        };
+    command_parser["Pos"] = 
+        [](const SemanticValues& values){
+            return WorkerIdentifier{
+                WorkerIdentifierType::Pos,
+                any_cast<unsigned int>(values[values.size() - 1]),
+            };
+        };
+    command_parser["Number"] = 
+        [](const SemanticValues& values){
+            return values.token_to_number<unsigned int>();
+        };
 }
+
+void CommandLine::execute_command(const string& command) {
+    command_parser.parse(command.c_str());
+}
+
+void CommandLine::print_help() {
+    lock_guard<mutex> output_lock{output_mtx};
+    clear_line();
+    cout << "Help" << endl;
+    print_prompt_and_user_input();
+}
+
+void CommandLine::list_workers() {
+    lock_guard<mutex> output_lock{output_mtx};
+    clear_line();
+    cout << "List" << endl;
+    print_prompt_and_user_input();
+}
+
+void CommandLine::exit() {
+    lock_guard<mutex> running_status_lck{running_status_mtx};
+    running = false;
+    quitted.notify_all();
+}
+
+void CommandLine::start_election(const SemanticValues& values) {
+    cout << values.size() << flush;
+    if (values.size() == 1) {
+        ring->start_election();
+    }
+    else {
+        start_election(any_cast<WorkerIdentifier>(values[1]));
+    }
+}
+
+void CommandLine::start_election(const WorkerIdentifier&) {
+
+}
+
+void CommandLine::stop_ring_or_worker(const SemanticValues&) {
+
+}
+
+void CommandLine::stop_ring_or_worker(const WorkerIdentifier&) {
+
+}
+
+void CommandLine::start_ring_or_worker(const SemanticValues&) {
+
+}
+
+void CommandLine::start_ring_or_worker(const WorkerIdentifier&) {
+
+}
+
+void CommandLine::remove_worker(const SemanticValues&) {
+
+}
+
+void CommandLine::remove_worker(const WorkerIdentifier&) {
+
+}
+
 
 void CommandLine::log(spdlog::level::level_enum log_level, const string& message) {
     lock_guard<mutex> output_lock{output_mtx};

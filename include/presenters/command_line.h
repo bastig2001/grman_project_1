@@ -3,9 +3,20 @@
 #include "presenters/presenter.h"
 #include "ring.h"
 
+#include "peglib.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+
+enum class WorkerIdentifierType {
+    Id,
+    Pos
+};
+
+struct WorkerIdentifier {
+    WorkerIdentifierType type{};
+    unsigned int value{};
+};
 
 // A Presenter that provides a command line to interact with the Ring.
 // Outputs are written with the given Presenter.
@@ -25,8 +36,10 @@ class CommandLine: public Presenter {
     bool in_esc_mode{false};
     unsigned int user_cursor_position{0};
     const unsigned int promp_length{2};
+    peg::parser command_parser;
 
     void set_output_writer(Presenter* output_writer);
+    void define_command_parser();
 
     void handle_input_key(char input_char);
     void handle_input_key_in_esc_mode(char input_char);
@@ -40,12 +53,25 @@ class CommandLine: public Presenter {
     void write_user_input_new(unsigned int index);
     void execute_command(const std::string& command);
 
+    void print_help();
+    void list_workers();
+    void exit();
+    void start_election(const peg::SemanticValues& values);
+    void start_election(const WorkerIdentifier& identifier);
+    void stop_ring_or_worker(const peg::SemanticValues& values);
+    void stop_ring_or_worker(const WorkerIdentifier& identifier);
+    void start_ring_or_worker(const peg::SemanticValues& values);
+    void start_ring_or_worker(const WorkerIdentifier& identifier);
+    void remove_worker(const peg::SemanticValues& values);
+    void remove_worker(const WorkerIdentifier& identifier);
+
     void clear_line();
     void print_prompt_and_user_input();
 
   public:
     CommandLine(Presenter* output_writer) {
         set_output_writer(output_writer);
+        define_command_parser();
     }
 
     void set_ring(Ring* ring);
