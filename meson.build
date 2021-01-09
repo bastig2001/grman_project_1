@@ -11,20 +11,23 @@ add_global_arguments('-DASIO_STANDALONE', language : 'cpp')
 add_global_arguments('-DASIO_NO_DEPRECATED', language : 'cpp')
 # end asio
 
-# CLI11: https://github.com/CLIUtils/CLI11
-add_global_arguments('-I' + get_option('cli11_include_dir'), language : 'cpp')
-
-# spdlog: https://github.com/gabime/spdlog
-# add_global_arguments('-I' + get_option('spdlog_include_dir'), language : 'cpp')
-spdlog = dependency('spdlog')
-
 # Catch2: https://github.com/catchorg/Catch2
 # add_global_arguments('-I' + get_option('catch2_include_dir'), language : 'cpp')
 catch2 = dependency('catch2')
 
+# CLI11: https://github.com/CLIUtils/CLI11
+add_global_arguments('-I' + get_option('cli11_include_dir'), language : 'cpp')
+
+# cpp-peglib: https://github.com/yhirose/cpp-peglib
+add_global_arguments('-I' + get_option('peglib_include_dir'), language : 'cpp')
+
 # fmt: https://github.com/fmtlib/fmt
 # add_global_arguments('-I' + get_option('fmt_include_dir'), language : 'cpp')
 fmt = dependency('fmt')
+
+# spdlog: https://github.com/gabime/spdlog
+# add_global_arguments('-I' + get_option('spdlog_include_dir'), language : 'cpp')
+spdlog = dependency('spdlog')
 
 # toml++: https://github.com/marzer/tomlplusplus/
 add_global_arguments('-I' + get_option('toml_include_dir'), language : 'cpp')
