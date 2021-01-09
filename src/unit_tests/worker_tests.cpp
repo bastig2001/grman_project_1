@@ -34,7 +34,7 @@ TEST_CASE(
     REQUIRE(worker.is_running());
     
     SECTION("Worker is able to start election") {
-        worker.assign_message_sync(new StartElection());
+        worker.assign_message_and_wait(new StartElection());
         sleep();
 
         CHECK(worker.participates_in_election);
@@ -51,7 +51,7 @@ TEST_CASE(
         worker.participates_in_election = false;
         worker.is_leader = GENERATE(true, false);
 
-        worker.assign_message_sync(new ElectionProposal(dummy_id));
+        worker.assign_message_and_wait(new ElectionProposal(dummy_id));
         sleep();
 
         CHECK(worker.participates_in_election);
@@ -68,7 +68,7 @@ TEST_CASE(
     SECTION("Worker can handle out of order election proposals") {
         worker.participates_in_election = true;
 
-        worker.assign_message_sync(new ElectionProposal(dummy_id));
+        worker.assign_message_and_wait(new ElectionProposal(dummy_id));
         sleep();
 
         CHECK(worker.participates_in_election);
@@ -87,7 +87,7 @@ TEST_CASE(
         worker.participates_in_election = true;
         worker.is_leader = false;
 
-        worker.assign_message_sync(new ElectionProposal(worker_id));
+        worker.assign_message_and_wait(new ElectionProposal(worker_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -105,7 +105,7 @@ TEST_CASE(
         worker.participates_in_election = true;
         worker.is_leader = false;
 
-        worker.assign_message_sync(new Elected(dummy_id));
+        worker.assign_message_and_wait(new Elected(dummy_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -123,7 +123,7 @@ TEST_CASE(
         worker.participates_in_election = false;
         worker.is_leader = true;
 
-        worker.assign_message_sync(new Elected(worker_id));
+        worker.assign_message_and_wait(new Elected(worker_id));
         sleep();
 
         CHECK_FALSE(worker.participates_in_election);
@@ -132,7 +132,7 @@ TEST_CASE(
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
-    worker.assign_message_sync(new Stop());
+    worker.assign_message_and_wait(new Stop());
     sleep();
 
     REQUIRE_FALSE(dummy_worker.is_running());
@@ -168,7 +168,7 @@ TEST_CASE(
             expected_worker_position--;
         }
 
-        worker.assign_message_sync(new DeadWorker(dead_worker_position));
+        worker.assign_message_and_wait(new DeadWorker(dead_worker_position));
         sleep();
 
         CHECK(worker.neighbours.size() == number_of_workers - 1);
@@ -188,7 +188,7 @@ TEST_CASE(
         };
         unsigned int expected_worker_position{worker.position};
 
-        worker.assign_message_sync(new DeadWorker(neighbour_position));
+        worker.assign_message_and_wait(new DeadWorker(neighbour_position));
         sleep();
 
         CHECK(worker.neighbours.size() == number_of_workers);
@@ -207,7 +207,7 @@ TEST_CASE(
             expected_worker_position++;
         }
 
-        worker.assign_message_sync(
+        worker.assign_message_and_wait(
             new NewWorker(new_worker_position, &other_worker)
         );
         sleep();
@@ -224,7 +224,7 @@ TEST_CASE(
         delete message;
     }
 
-    worker.assign_message_sync(new Stop());
+    worker.assign_message_and_wait(new Stop());
     sleep();
 
     REQUIRE_FALSE(dummy_worker.is_running());
@@ -234,7 +234,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Worker computation functions work as expected"
+    "Worker computation functions work as expected",
     "[worker][worker_computations]"
 ) {
     unsigned int number_of_workers{12};

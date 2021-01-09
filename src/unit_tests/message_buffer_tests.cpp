@@ -20,7 +20,7 @@ TEST_CASE(
     MessageBuffer buffer;
     
     SECTION("messages can't be assigned twice without them beeing taken first") {
-        buffer.assign_async(new NoMessage());
+        buffer.assign(new NoMessage());
         bool message_taken{false};
 
         thread t{[&](){
@@ -29,7 +29,7 @@ TEST_CASE(
             delete buffer.take();
         }};
 
-        buffer.assign_async(new NoMessage());
+        buffer.assign(new NoMessage());
 
         CHECK(message_taken);
 
@@ -43,7 +43,7 @@ TEST_CASE(
         thread t{[&](){
             sleep();
             message_assigned = true;
-            buffer.assign_async(new NoMessage());
+            buffer.assign(new NoMessage());
         }};
 
         delete buffer.take();
@@ -61,7 +61,7 @@ TEST_CASE(
             )
         };
 
-        buffer.assign_async(new LogMessage(log_msg_content));
+        buffer.assign(new LogMessage(log_msg_content));
 
         auto taken_message{buffer.take()};
 
@@ -74,14 +74,14 @@ TEST_CASE(
     SECTION("is_empty holds true when the buffer has no message assigned") {
         REQUIRE(buffer.is_empty());
 
-        buffer.assign_async(new NoMessage());
+        buffer.assign(new NoMessage());
         CHECK_FALSE(buffer.is_empty());
 
         delete buffer.take();
         CHECK(buffer.is_empty());
     }
 
-    SECTION("assign_sync waits for the message to be taken") {
+    SECTION("assign_and_wait waits for the message to be taken") {
         bool message_taken{false};
 
         thread t{[&](){
@@ -90,25 +90,25 @@ TEST_CASE(
             delete buffer.take();
         }};
 
-        CHECK(buffer.assign_sync(new NoMessage(), waittime));
+        CHECK(buffer.assign_and_wait(new NoMessage(), waittime));
 
         CHECK(message_taken);
 
         t.join();
     }
 
-    SECTION("multiple assign_sync calls are handled in the calling order") {
+    SECTION("multiple assign_and_wait calls are handled in the calling order") {
         bool first_message_taken{false};
         bool second_message_taken{false};
 
         thread t1{[&](){
             sleep();
-            CHECK(buffer.assign_sync(new NoMessage(), waittime));
+            CHECK(buffer.assign_and_wait(new NoMessage(), waittime));
             first_message_taken = true;
         }};
         thread t2{[&](){
             sleep_more(2);
-            CHECK(buffer.assign_sync(new NoMessage(), waittime));
+            CHECK(buffer.assign_and_wait(new NoMessage(), waittime));
             second_message_taken = true;
         }};
 
@@ -129,18 +129,18 @@ TEST_CASE(
         t2.join();
     }
 
-    SECTION("simultaneous asssign_sync and assign_async calls are both handled and both exit") {
+    SECTION("simultaneous asssign_sync and assign calls are both handled and both exit") {
         bool first_message_taken{false};
         bool second_message_assigned{false};
 
         thread t1{[&](){
             sleep();
-            CHECK(buffer.assign_sync(new NoMessage(), waittime));
+            CHECK(buffer.assign_and_wait(new NoMessage(), waittime));
             first_message_taken = true;
         }};
         thread t2{[&](){
             sleep_more(2);
-            buffer.assign_async(new NoMessage());
+            buffer.assign(new NoMessage());
             second_message_assigned = true;
         }};
 

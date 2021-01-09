@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <fmt/core.h>
+#include <string>
 
 // The possible Types of Messages a Message-Object can represent.
 enum class MessageType {
@@ -21,7 +21,7 @@ struct Message {
     // The Type of the Message object
     const MessageType type;
 
-    // An easier form of static casting for Message objects.
+    // A more comfortable form of static casting for Message objects.
     // Meant to be used to cast to the appropriate Subclass annotated by 'type'.
     template<typename T>
     T* cast_to() {
@@ -127,7 +127,6 @@ class Worker; // a forward declaration of Worker for NewWorker
 struct NewWorker: Message {
     const unsigned int position;
 
-    // can't be constant because it has to be inserted into vectors
     Worker* worker; 
 
     NewWorker(
