@@ -228,20 +228,24 @@ using namespace peg;
 void CommandLine::define_command_parser() {
     command_parser = (R"(
         Procedure     <- Help / List / Exit / StartElection / Stop / Start / Remove
-        Help          <- 'h' / 'help'
-        List          <- 'show' / 'list' / 'ls'
-        Exit          <- 'q' / 'quit' / 'exit'
-        StartElection <- 'start-election' (Id / Pos)?
-        Stop          <- 'stop' (Id / Pos)*
-        Start         <- 'start' (Id / Pos)*
-        Remove        <- ('remove' / 'rm') (Id / Pos)+
-        Id            <- 'id'? Number
-        Pos           <- 'pos' Number
+        Help          <- 'h'i / 'help'i
+        List          <- 'show'i / 'list'i / 'ls'
+        Exit          <- 'q'i / 'quit'i / 'exit'i
+        StartElection <- 'start-election'i (Id / Pos)?
+        Stop          <- 'stop'i (Id / Pos)*
+        Start         <- 'start'i (Id / Pos)*
+        Remove        <- ('remove'i / 'rm'i) (Id / Pos)+
+        Id            <- ('id'i)? Number
+        Pos           <- 'pos'i Number
         Number        <- < [0-9]+ >
 
         %whitespace   <- [ \t]*
     )");
 
+    command_parser.log = 
+        [this](size_t, size_t col, const string& msg) { 
+            print_error(col, msg); 
+        };
     command_parser["Help"] = 
         [this](const SemanticValues&){ print_help(); };
     command_parser["List"] = 
@@ -250,11 +254,11 @@ void CommandLine::define_command_parser() {
         [this](const SemanticValues&){ exit(); };
     command_parser["StartElection"] = 
         [this](const SemanticValues& values){ start_election(values); };
-    command_parser["StartElection"] = 
+    command_parser["Stop"] = 
         [this](const SemanticValues& values){ stop_ring_or_worker(values); };
-    command_parser["StartElection"] = 
+    command_parser["Start"] = 
         [this](const SemanticValues& values){ start_ring_or_worker(values); };
-    command_parser["StartElection"] = 
+    command_parser["Remove"] = 
         [this](const SemanticValues& values){ remove_worker(values); };
     command_parser["Id"] = 
         [](const SemanticValues& values){ 
@@ -301,12 +305,11 @@ void CommandLine::exit() {
 }
 
 void CommandLine::start_election(const SemanticValues& values) {
-    cout << values.size() << flush;
-    if (values.size() == 1) {
+    if (values.size() == 0) {
         ring->start_election();
     }
     else {
-        start_election(any_cast<WorkerIdentifier>(values[1]));
+        start_election(any_cast<WorkerIdentifier>(values[0]));
     }
 }
 
@@ -336,6 +339,27 @@ void CommandLine::remove_worker(const SemanticValues&) {
 
 void CommandLine::remove_worker(const WorkerIdentifier&) {
 
+}
+
+void CommandLine::print_error(size_t column, const string& err_msg) {
+    lock_guard<mutex> output_lock{output_mtx};
+
+    clear_line();
+
+    string msg{err_msg + " starting here "};
+    for (unsigned int i{0}; i < promp_length + column - 1; i++) {
+        cerr << " ";
+    }
+    cerr << "^\n" << msg;
+    for (unsigned long i{msg.size()}; i < promp_length + column - 1; i++) {
+        cerr << "_";
+    }
+    if (msg.size() < column) {
+        cerr << "|";
+    }
+    cerr << "\nRun help for more information." << endl;
+
+    print_prompt_and_user_input();
 }
 
 

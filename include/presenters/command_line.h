@@ -64,6 +64,7 @@ class CommandLine: public Presenter {
     void start_ring_or_worker(const WorkerIdentifier& identifier);
     void remove_worker(const peg::SemanticValues& values);
     void remove_worker(const WorkerIdentifier& identifier);
+    void print_error(size_t column, const std::string& err_msg);
 
     void clear_line();
     void print_prompt_and_user_input();
