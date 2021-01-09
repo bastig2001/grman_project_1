@@ -40,18 +40,34 @@ bool CommandLine::start() {
 }
 
 void CommandLine::stop() {
+    lock_guard<mutex> running_status_lck{running_status_mtx};
     running = false;
+
     if (command_line_thread.joinable()) {
         command_line_thread.join();
     }
+
+    quitted.notify_all();
+}
+
+void CommandLine::wait() {
+    unique_lock<mutex> running_status_lck{running_status_mtx};
+    quitted.wait(running_status_lck, [this](){ return !running; });
 }
 
 void CommandLine::operator()() {
-    struct termios old_settings{}, new_settings{};
-    tcgetattr(fileno(stdin), &old_settings);
-    new_settings = old_settings;
-    new_settings.c_lflag &= (~ICANON & ~ECHO);
-    tcsetattr(fileno(stdin), TCSANOW, &new_settings);
+    struct termios original_stdin_settings{}, new_stdin_settings{};
+
+    // save stdin settings
+    tcgetattr(fileno(stdin), &original_stdin_settings); 
+
+    new_stdin_settings = original_stdin_settings;
+
+    // disbale echoing in new stdin settings
+    new_stdin_settings.c_lflag &= (~ICANON & ~ECHO); 
+
+    // load new stdin settings
+    tcsetattr(fileno(stdin), TCSANOW, &new_stdin_settings); 
 
     while (running) {
         fd_set set{};
@@ -61,27 +77,150 @@ void CommandLine::operator()() {
         FD_ZERO(&set);
         FD_SET(fileno(stdin), &set);
 
-        int res{select(fileno(stdin) + 1, &set, nullptr, nullptr, &tv)};
-        if (res > 0) {
-            char key{};
-            read(fileno(stdin), &key, 1);
+        int read_readiness{
+            select(fileno(stdin) + 1, &set, nullptr, nullptr, &tv)
+        };
+        if (read_readiness > 0) {
+            char input_char{};
+            read(fileno(stdin), &input_char, 1); // read from stdin
 
-            if ((int)key == 127) { // if backspace
-                input_buffer << "\b \b";
-
-                lock_guard<mutex> output_lock{output_mtx};
-                cout << "\b \b" << flush;
-            }
-            else {
-                input_buffer << key;
-
-                lock_guard<mutex> output_lock{output_mtx};
-                cout << key << flush;
-            }
+            handle_input_key(input_char);
         }
     }
 
-    tcsetattr(fileno(stdin), TCSANOW, &old_settings);
+    // load back original stdin settings
+    tcsetattr(fileno(stdin), TCSANOW, &original_stdin_settings);
+}
+
+void CommandLine::handle_input_key(char input_char) {
+    if (in_esc_mode) {
+        handle_input_key_in_esc_mode(input_char);        
+    }
+    else {
+        handle_input_key_in_regular_mode(input_char);
+    }
+}
+
+void CommandLine::handle_input_key_in_esc_mode(char input_char) {
+    in_esc_mode = false;
+
+    ctrl_sequence += input_char;
+    if (ctrl_sequence == "[") { // CSI
+        // expecting more keys
+        in_esc_mode = true;
+    }
+    else if (ctrl_sequence == "[C") { // arrow key right
+        move_cursor_right();
+    }
+    else if (ctrl_sequence == "[D") { // arrow key left
+        move_cursor_left();
+    }
+    else if (ctrl_sequence == "[3") { // precursor to DEL
+        // expecting more keys
+        in_esc_mode = true;
+    }
+    else if (ctrl_sequence == "[3~") { // DEL
+        delete_char_on_cursor();
+    }
+}
+
+void CommandLine::handle_input_key_in_regular_mode(char input_char) {
+    switch (input_char) {
+        case 27: // ESC
+            in_esc_mode = true;
+            ctrl_sequence = "";
+            break;
+        case 127: // Backspace
+            delete_char_before_cursor();
+            break;
+        case '\n':
+            handle_newline();
+            break;
+        default:
+            write_char(input_char);
+            break;
+    }
+}
+
+void CommandLine::move_cursor_right() {
+    if (user_cursor_position < user_input.size()) {
+        lock_guard<mutex> output_lock{output_mtx};
+
+        user_cursor_position++;
+        cout << "\33[C" << flush;
+    }
+}
+
+void CommandLine::move_cursor_left() {
+    if (user_cursor_position > 0) {
+        lock_guard<mutex> output_lock{output_mtx};
+
+        user_cursor_position--;
+        cout << "\33[D" << flush;
+    }
+}
+
+void CommandLine::delete_char_on_cursor() {
+    if (user_cursor_position < user_input.size()) {
+        lock_guard<mutex> output_lock{output_mtx};
+
+        user_input.erase(user_cursor_position, 1);
+        write_user_input_new(user_cursor_position);
+    }
+}
+
+void CommandLine::delete_char_before_cursor() {
+    if (user_cursor_position > 0) {
+        lock_guard<mutex> output_lock{output_mtx};
+
+        unsigned int char_to_remove_index{user_cursor_position - 1};
+        user_cursor_position--;
+        user_input.erase(char_to_remove_index, 1);
+        write_user_input_new(char_to_remove_index);
+    }
+}
+
+void CommandLine::handle_newline() {
+    unique_lock<mutex> output_lock{output_mtx};
+
+    string command{user_input};
+    user_input = "";
+    user_cursor_position = 0;
+
+    cout << "\n> " << flush;
+
+    output_lock.unlock();
+
+    execute_command(command);
+}
+
+void CommandLine::write_char(char output_char) {
+    lock_guard<mutex> output_lock{output_mtx};
+
+    user_cursor_position++;
+
+    if (user_cursor_position < user_input.size() - 1) {
+        user_input.insert(
+            user_input.begin() + user_cursor_position - 1, 
+            output_char
+        );
+        write_user_input_new(user_cursor_position - 1);
+    }
+    else {
+        user_input += output_char;
+        cout << output_char << flush;
+    }
+}
+
+void CommandLine::write_user_input_new(unsigned int index) {
+    cout << "\r\33[" << promp_length + index << "C"                // move to position of first char to change
+         << "\33[K"                                                // clear all chars to right of cursor
+         << user_input.substr(index)                               // new user input
+         << "\r\33[" << promp_length + user_cursor_position << "C" // move cursor to previous position
+         << flush; 
+}
+
+void CommandLine::execute_command(const std::string&) {
 }
 
 void CommandLine::log(spdlog::level::level_enum log_level, const string& message) {
@@ -250,5 +389,7 @@ void CommandLine::clear_line() {
 }
 
 void CommandLine::print_prompt_and_user_input() {
-    cout << "> " << input_buffer.str() << flush;
+    cout << "> " << user_input                                     // prompt and user input
+         << "\r\33[" << promp_length + user_cursor_position << "C" // move cursor to previous position
+         << flush;
 }

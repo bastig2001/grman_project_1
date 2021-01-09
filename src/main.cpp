@@ -39,7 +39,8 @@ void run_ring(const Config& config, Presenter* presenter) {
     ring.start();
     
     chrono::milliseconds sleeptime{config.after_election_sleeptime};
-    if (config.number_of_elections > 0) {
+    
+    if (config.number_of_elections > 0 || command_line) {
         for (unsigned int i{0}; i < config.number_of_elections; i++) {
             cycle(ring, sleeptime);
         }
@@ -51,6 +52,7 @@ void run_ring(const Config& config, Presenter* presenter) {
     }
 
     if (command_line) {
+        command_line->wait();
         command_line->stop();
     }
 
