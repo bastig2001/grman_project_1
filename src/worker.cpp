@@ -11,19 +11,19 @@
 using namespace std;
 
 
-bool Worker::assign_message_sync(Message* message) {
+bool Worker::assign_message_and_wait(Message* message) {
     // 1 worker sleeptime should be expected at least
     // 2 because it might get a message from the Ring
     // 2.5 because there are processes besides just sleeping
     // The waittime is at least 1s.
-    return message_buffer.assign_sync(
+    return message_buffer.assign_and_wait(
         message, 
         max(1000u, (unsigned int)(sleeptime * 2.5))
     );
 }
 
-void Worker::assign_message_async(Message* message) {
-    message_buffer.assign_async(message);
+void Worker::assign_message(Message* message) {
+    message_buffer.assign(message);
 }
 
 void Worker::set_neighbours(vector<Worker*> neighbours) {
@@ -222,7 +222,7 @@ void Worker::send_to_neighbour(Message* message) {
 
     previous_message_sent = async(
         [message{message}, this](){ 
-            return neighbours[0]->assign_message_sync(message); 
+            return neighbours[0]->assign_message_and_wait(message); 
         }
     );
 }
