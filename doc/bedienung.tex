@@ -1,0 +1,40 @@
+\section{Bedienung}
+
+Das Programm \verb|ring_voting| bietet einen Ring mit zufällig generierten und einzigartigen Arbeitern, die den Chang-Roberts-Algorithmus ausführen.
+
+Das Programm kann über die Kommandozeile bedient werden. Für die Konfiguration gibt es folgende Parameter:
+
+\begin{center}
+\begin{tabular}{ | c | c | c | p{3cm} | }
+\hline
+\textbf{Parametername} & \textbf{Datentyp} & \textbf{Standardwert} & \textbf{Beschreibung} \\
+\hline
+ \verb|size| & positive ganze Zahl > 0 &  & Anzahl der Arbeiter  \\ \hline
+ \verb|-h, --help| &  & & Ausgabe der Hilfe \\  \hline
+ \verb|-c, --config| & Dateiname & & Liest die Konfiguration aus der angegebenen Datei aus \\ \hline
+ \verb|-n,| & ganze Zahl >= 0 & 0 & Führt die angegebene Anzahl an Wahlen durch bis es stoppt. \\ 
+ \verb|--number-of-elections| & & & Bei 0 stoppt es nicht. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{ | c | c | c | p{3cm} | }
+\hline
+\textbf{Parametername} & \textbf{Datentyp} & \textbf{Standardwert} & \textbf{Beschreibung} \\
+\hline
+ \verb|--sleep| & ganze Zahl >= 0 & 5.000 & Die Wartezeit in Millisekunden nach jeder Wahl, bevor die nächste ausgeführt wird \\ \hline
+ \verb|--worker-sleep| & ganze Zahl >= 0 & 500 & Die Zeit in Millisekunden, die jeder Arbeiter nach einer erledigten Aufgabe wartet, 
+                                                    bevor er die nächste ausführt \\ \hline
+ \verb|--log| & & & Aktiviert Loggen, wenn nicht weiter spezifiziert ist das Log-Level INFO und die Ausgabe ist auf die Konsole \\ \hline
+ \verb|--log-file| & Dateiname & & Aktiviert Loggen und schreibt den Log in die angeführte Datei. 
+                                    Die Datei wird erstellt, wenn sie noch nicht existiert, ansonsten wird der Log am Ende angehängt. \\ \hline
+ \verb|log-date| & & & Logt in die Datei nicht nur die Uhrzeit, sondern auch das Datum \\ \hline
+ \verb|--log-level| & 0..5 & 2 bzw. INFO & Setzt das Log-Level auf den angeführten Wert. 
+                                            0 ist TRACE, 1 ist DEBUG, 2 ist INFO, 3 ist WARN, 4 ist ERROR und 5 ist CIRTICAL \\ \hline
+ \verb|--no-config-log| & & & Die benutze Konfiguration wird nicht als DEBUG-Nahricht geloggt \\ \hline
+\end{tabular}
+\end{center}
+
+Die Größe des Ringes muss entweder in der Kommandozeile oder in der Konfigurationsdatei angegeben werden.
+
+Die Konfigurationsdatei hat die außer der Hilfsnachricht die selben konfigurierbaren Optionen, wie die Kommandozeile.

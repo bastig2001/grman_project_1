@@ -1,0 +1,114 @@
+\section{Implementierung}
+
+Der grundlegende Chang-Roberts-Algorithmus ist nicht besonders schwer, doch kann man bei der Implementierung einen gewissen Entscheidungsspielraum versuchen
+zu erkunden und den Algorithmus auch mit einer sichereren Kommunikation unterstützen.
+
+
+\subsection{Ring}
+
+Bei der Ring-Klasse und dem konkreten Ring-Objekt handelt es sich im Grunde um einen eher einfachen Builder, welcher die Arbeiterprozesse mit einzigartigen 
+Ids anlegt und sie über Zeiger in einer Ringstruktur miteinander verbindet. Weiter ist Ring auch für das starten und stoppen der Arbeiterprozesse 
+verantwortlich und bietet mit der Möglichkeit, Wahlen zu initiieren, auch eine grundlegende Schnittstelle für die Benutzung im Programm.
+
+
+\subsection{Worker}
+
+Jeder Arbeiter hat eine Id, kennt seine Position im Ring und hat auch Verweise auf alle Arbeiter im Ring, sich selbst eingeschlossen.
+Dadurch kann ein Arbeiter beim Ausfall seines Nachbars, die Nachrichten an den nächsten Prozess, also seinen neuen Nachbarn, leiten und das System kommt
+nicht zum erliegen, da alle Nachrichten bei einem ausgefallenen Prozess hängen bleiben.
+
+Jeder Arbeiter hat seinen eigenen Nachrichtenpuffer, zu welchem er eine Schnittstelle zur Verfügung stellt und von dem er Nachrichten von seinem Nachbarn in 
+Gegenrichtung oder von der Ring-Schnittstelle -- in dem Fall wird der Arbeiter stoppen oder eine Wahl initiieren müssen -- erfasst. Je nachdem, um welche
+Art von Nachricht es sich handelt und welchen Inhalt sie hat, wird entsprechend gehandelt.
+
+Der Arbeite implementiert den Chang-Roberts-Wahlalgorithmus so wie in Ablauf \ref{sec:ablauf} beschrieben, mit dem Zusatz, dass wenn der noch amtierende
+Leiter, falls es ihn noch gibt, einen Wahlvorschlag erhält, dieser nicht nur an der Wahl teilnimmt sonder auch von seiner Position als Leiter zurücktritt.
+Sonst könnte es theoretisch zu mehr als einem Leiter kommen. Diese Ergänzung ist allerdings nur nötig, da in diesem Programm eine Wahl nicht erst
+eingeleitet wird, wenn ein Leiter fehlt, sondern durch die Wünsche des Benutzer bereits früher.
+
+\subsection{Message Buffer}
+
+Der Nachrichtenpuffer bietet eine Möglichkeit Nachrichten von einem Arbeiter zum nächsten bzw. vom Ring-Controller zu einem Arbeiter zu senden.
+Er bietet zwei verschieden Möglichkeiten dafür an, eine Möglichkeit, bei der die Nachricht lediglich sobald als möglich in den Puffer gelegt wird und 
+der Sender mit seiner Tätigkeit wieder weitermachen kann, und eine andere Möglichkeit, bei der zusätzlich gewartet wird, bis die Nachricht vom Gegenüber 
+entnommen wurde oder zu viel Zeit verstrichen ist. Die Arbeiter verwenden letzteren Weg für die Kommunikation untereinander. Wenn die Wartezeit ausläuft
+bevor der Nachbar die Nachricht entnommen hat, wird angenommen, dass er ausgefallen ist.
+
+\noindent\hrulefill\par
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[mathescape, language=C++, caption=senden und warten]
+lock_guard<mutex> assign_and_wait_lck{
+    assign_and_wait_mtx
+};
+
+unique_lock<mutex> rendezvous_lck{rendezvous_mtx}; 
+message_is_taken = false;
+rendezvous_lck.unlock();
+
+assign(message);
+
+rendezvous_lck.lock();
+return message_taken.wait_for(
+    rendezvous_lck, chrono::milliseconds(waittime), 
+    [this](){ return message_is_taken; }
+);
+\end{lstlisting}
+\end{minipage}
+$$$$
+Bei der Funktion \verb|assign_and_wait| bzw. \textit{senden und warten} sieht man, dass durch den Lock gleich am Anfang nur ein Aufrufer auf einmal
+sich in dieser Funktion aufhalten darf. Das liegt daran, dass der Aufrufer, nachdem er die Nachricht mit \verb|assign(message)| sendet, unten darauf
+wartet, dass die Nachricht entnommen wird. Da bei einer Condition Variable nicht zwingend der Thread aufgeweckt wird, der länger gewartet hat, ist es
+zu vermeiden, dass mehrere Aufrufer gleichzeitig warten bzw. zur Überprüfung, ob sie warten müssen, kommen, sonst könnte dem falschen Sender glaubhaft
+gemacht werden, dass seine Nachricht bereits entnommen wurde. Außerdem bestünde noch die Gefahr, dass ein Aufrufer \verb|message_is_taken| auf falsch
+setzt kurz, nachdem es vom Empfänger auf wahr gesetzt wurde und noch bevor der wartende Aufrufer darauf reagieren konnte. Diese Probleme sind 
+in diesem Programm zwar nicht zu erwarten, da es je Puffer eigentlich nur einen Thread gibt, der diese Funktion benutzt. Das ist der vorrangige Nachbar.
+Doch da dieser Lock und Mutex in dieser konkreten Implementierung eigentlich nicht benötigt werden, blockieren sie also auch niemanden.
+
+\noindent\hrulefill\par
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=C++, caption={nur senden, ohne warten}]
+unique_lock<mutex> buffer_lck{buffer_mtx};
+message_assignable.wait(
+    buffer_lck, [this](){ return is_empty(); }
+);
+
+this->message = message;
+message_assigned = true;
+message_takable.notify_one();
+\end{lstlisting}
+\end{minipage}
+
+Bei der Funktion \verb|assign| bzw. \textit{senden} sieht man, dass am Anfang gewartet wird, dass man etwas in den Puffer legen kann, und es danach
+in den Puffer gelegt wird. Außerdem kann man in dieser Funktion auch erkennen, dass es der Puffer nur eine Nachricht halten kann. Der Puffer ist lediglich
+eine primitive Variable. Die Entscheidung, einen Puffer der Größe 1 zu benutzen, wurde gemacht, weil einerseits erspart man sich damit ein größeres Objekt
+und bei der Benutzung stört es nicht wirklich, da es meistens nur einen Sender, den vorrangige Nachbarn, gibt und manchmal auch einen zweiten, den
+Ring-Controller, mehr aber nicht.
+
+\noindent\hrulefill\par
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=C++, caption=Nachricht holen]
+unique_lock<mutex> buffer_lck{buffer_mtx};
+message_takable.wait(
+    buffer_lck, [this](){ return message_assigned; }
+);
+
+message_assigned = false;
+message_assignable.notify_one();
+
+lock_guard<mutex> rendezvous_lck{rendezvous_mtx};
+message_is_taken = true;
+message_taken.notify_one();
+
+return message;
+\end{lstlisting}
+\end{minipage}
+
+Die Funktion \verb|take| bzw. \textit{Nachricht holen} verwendet der Empfänger, um sich die Nachricht zu holen. Am Anfang wird überprüft, ob eine
+Nachricht vorhanden ist und wenn nicht wird gewartet. Die Nachricht wird dann entnommen und, falls Threads darauf warten, dass sie eine Nachricht in den
+Puffer legen können oder dass ihre Nachricht entnommen wurde, werden diese verständigt.
+
+
+\subsection{Message}
+
+Bei den Nachrichten selbst handelt es sich lediglich um Strukturen, die einen Nachrichtentyp und eventuell dazugehörige Daten enthalten.
+
