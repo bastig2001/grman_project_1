@@ -45,7 +45,7 @@ src = [
 ]
 
 unit_tests_src = [
-    'src/test_main.cpp',
+    'src/unit_tests/main.cpp',
     'src/unit_tests/worker_tests.cpp',
     'src/unit_tests/message_buffer_tests.cpp'
 ]

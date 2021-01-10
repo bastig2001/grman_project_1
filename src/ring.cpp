@@ -1,4 +1,5 @@
 #include "ring.h"
+#include "messages.h"
 #include "presenters/no_presenter.h"
 
 #include <set>
@@ -96,6 +97,16 @@ void Ring::start() {
 void Ring::start_election() {
     if (worker_threads.size() > 0) {
         workers[0]->assign_message(new StartElection());
+    }
+}
+
+bool Ring::start_election_at_position(unsigned int worker_position) {
+    if (workers.size() < worker_position) {
+        workers[worker_position]->assign_message(new StartElection());
+        return true;
+    }
+    else {
+        return false;
     }
 }
 

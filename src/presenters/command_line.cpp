@@ -227,16 +227,14 @@ using namespace peg;
 
 void CommandLine::define_command_parser() {
     command_parser = (R"(
-        Procedure     <- Help / List / Exit / StartElection / Stop / Start / Remove
+        Command       <- Help / List / Exit / StartElection / Stop / Start
         Help          <- 'h'i / 'help'i
         List          <- 'show'i / 'list'i / 'ls'
         Exit          <- 'q'i / 'quit'i / 'exit'i
-        StartElection <- 'start-election'i (Id / Pos)?
-        Stop          <- 'stop'i (Id / Pos)*
-        Start         <- 'start'i (Id / Pos)*
-        Remove        <- ('remove'i / 'rm'i) (Id / Pos)+
-        Id            <- ('id'i)? Number
-        Pos           <- 'pos'i Number
+        StartElection <- 'start-election'i Pos?
+        Stop          <- 'stop'i Pos+
+        Start         <- 'start'i Pos+
+        Pos           <- Number
         Number        <- < [0-9]+ >
 
         %whitespace   <- [ \t]*
@@ -255,24 +253,12 @@ void CommandLine::define_command_parser() {
     command_parser["StartElection"] = 
         [this](const SemanticValues& values){ start_election(values); };
     command_parser["Stop"] = 
-        [this](const SemanticValues& values){ stop_ring_or_worker(values); };
+        [this](const SemanticValues& values){ stop_workers(values); };
     command_parser["Start"] = 
-        [this](const SemanticValues& values){ start_ring_or_worker(values); };
-    command_parser["Remove"] = 
-        [this](const SemanticValues& values){ remove_worker(values); };
-    command_parser["Id"] = 
-        [](const SemanticValues& values){ 
-            return WorkerIdentifier{
-                WorkerIdentifierType::Id,
-                any_cast<unsigned int>(values[values.size() - 1]),
-            };
-        };
+        [this](const SemanticValues& values){ start_workers(values); };
     command_parser["Pos"] = 
         [](const SemanticValues& values){
-            return WorkerIdentifier{
-                WorkerIdentifierType::Pos,
-                any_cast<unsigned int>(values[values.size() - 1]),
-            };
+            return any_cast<unsigned int>(values[0]);
         };
     command_parser["Number"] = 
         [](const SemanticValues& values){
@@ -287,7 +273,14 @@ void CommandLine::execute_command(const string& command) {
 void CommandLine::print_help() {
     lock_guard<mutex> output_lock{output_mtx};
     clear_line();
-    cout << "Help" << endl;
+    cout << "Following Commands are available:\n"
+         << "  h, help               outputs this help message\n"
+         << "  ls, list, show        lists all Workers in the Ring\n"
+         << "  q, quit, exit         exits the program\n"
+         << "  start-election [POS]  starts an election with the Worker at the given position or at position 0\n"
+         << "  stop POS ...          stops the Workers at the given positions\n"
+         << "  start POS ...         starts the Workers at the given positions" 
+         << endl; 
     print_prompt_and_user_input();
 }
 
@@ -309,35 +302,22 @@ void CommandLine::start_election(const SemanticValues& values) {
         ring->start_election();
     }
     else {
-        start_election(any_cast<WorkerIdentifier>(values[0]));
+        if (!ring->start_election_at_position(
+            any_cast<unsigned int>(values[0])
+        )) {
+            lock_guard<mutex> output_lock{output_mtx};
+            clear_line();
+            cerr << "There is no Worker at the given position" << endl;
+            print_prompt_and_user_input();
+        }
     }
 }
 
-void CommandLine::start_election(const WorkerIdentifier&) {
+void CommandLine::stop_workers(const SemanticValues&) {
 
 }
 
-void CommandLine::stop_ring_or_worker(const SemanticValues&) {
-
-}
-
-void CommandLine::stop_ring_or_worker(const WorkerIdentifier&) {
-
-}
-
-void CommandLine::start_ring_or_worker(const SemanticValues&) {
-
-}
-
-void CommandLine::start_ring_or_worker(const WorkerIdentifier&) {
-
-}
-
-void CommandLine::remove_worker(const SemanticValues&) {
-
-}
-
-void CommandLine::remove_worker(const WorkerIdentifier&) {
+void CommandLine::start_workers(const SemanticValues&) {
 
 }
 

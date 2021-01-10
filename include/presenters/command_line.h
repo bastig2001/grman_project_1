@@ -8,16 +8,6 @@
 #include <mutex>
 #include <condition_variable>
 
-enum class WorkerIdentifierType {
-    Id,
-    Pos
-};
-
-struct WorkerIdentifier {
-    WorkerIdentifierType type{};
-    unsigned int value{};
-};
-
 // A Presenter that provides a command line to interact with the Ring.
 // Outputs are written with the given Presenter.
 class CommandLine: public Presenter {
@@ -57,13 +47,8 @@ class CommandLine: public Presenter {
     void list_workers();
     void exit();
     void start_election(const peg::SemanticValues& values);
-    void start_election(const WorkerIdentifier& identifier);
-    void stop_ring_or_worker(const peg::SemanticValues& values);
-    void stop_ring_or_worker(const WorkerIdentifier& identifier);
-    void start_ring_or_worker(const peg::SemanticValues& values);
-    void start_ring_or_worker(const WorkerIdentifier& identifier);
-    void remove_worker(const peg::SemanticValues& values);
-    void remove_worker(const WorkerIdentifier& identifier);
+    void stop_workers(const peg::SemanticValues& values);
+    void start_workers(const peg::SemanticValues& values);
     void print_error(size_t column, const std::string& err_msg);
 
     void clear_line();

@@ -35,6 +35,9 @@ class Ring {
     // Starts an election among the Workers
     // according to the Chang and Roberts Algorithm.
     void start_election();
+    
+    // returns true if the election was started successfully
+    bool start_election_at_position(unsigned int worker_position);
 
     // Stops all Workers and joins their threads.
     void stop();
