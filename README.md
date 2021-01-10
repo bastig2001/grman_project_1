@@ -1,4 +1,4 @@
-# Wahlalgorithmus im Ring
+# Election Algorithm in a Ring
 
 The program `ring_voting` provides a Ring with Workers which implement the Chang and Roberts Algorithm for Elections.
 
