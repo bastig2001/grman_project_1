@@ -7,15 +7,15 @@ using namespace std;
 
 
 bool MessageBuffer::assign_and_wait(Message* message, unsigned int waittime) {
-    // only one thread at a time is allowed to synchronously assign
-    lock_guard<mutex> assign_sync_lck{assign_sync_mtx};
+    // only one thread at a time is allowed to be in this method
+    lock_guard<mutex> assign_and_wait_lck{assign_and_wait_mtx};
 
     unique_lock<mutex> rendezvous_lck{rendezvous_mtx}; 
     message_is_taken = false;
     rendezvous_lck.unlock();
 
     // rendezvous_lck beeing locked during assignment could cause a deadlock 
-    //      in combination with another assign_async call and take
+    //      in combination with another assign call and take
     assign(message);
 
     rendezvous_lck.lock();
