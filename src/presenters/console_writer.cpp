@@ -1,5 +1,6 @@
 #include "presenters/console_writer.h"
 
+#define FMT_HEADER_ONLY
 #include <fmt/color.h>
 #include <iostream>
 

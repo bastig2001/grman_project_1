@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#define FMT_HEADER_ONLY
 #include <fmt/core.h>
 
 // The possible Types of Messages a Message-Object can represent.
