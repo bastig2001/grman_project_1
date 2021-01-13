@@ -1,9 +1,11 @@
 #pragma once
 
 #include "message.h"
-#include "spdlog/common.h"
+
+#include <spdlog/common.h>
 
 
+// The possible Types of Events an Event-Object can represent
 enum class EventType {
     RingCreated,
     RingStarts,
@@ -33,6 +35,8 @@ enum class EventType {
 };
 
 
+// An Event, meant to represent Information for showing to the user or logging
+// only instantiable through the factory methods
 struct Event {
     const EventType type;
     const spdlog::level::level_enum logging_level;
@@ -72,6 +76,7 @@ struct Event {
 };
 
 
+// An Event for the creation of a Ring
 struct RingCreated: Event {
     const size_t size;
 
@@ -85,6 +90,8 @@ struct RingCreated: Event {
 };
 
 
+// An Event for when a Worker gets created, started or stopped
+// only instantiable through the factory methods
 struct WorkerStatusChanged: Event {
     const unsigned int worker_id;
     const unsigned int worker_position;
@@ -140,6 +147,7 @@ struct WorkerStatusChanged: Event {
 };
 
 
+// An Event for when a Worker got a Message
 struct GotMessage: Event {
     const unsigned int worker_id;
     const Message* message;
@@ -156,6 +164,7 @@ struct GotMessage: Event {
 };
 
 
+// An Event for when a Worker wants to output something
 struct Says: Event {
     const unsigned int worker_id;
     const std::string message;
@@ -172,6 +181,8 @@ struct Says: Event {
 };
 
 
+// An Event for when a Worker does something and only their id is necessary
+// only instantiable through the factory methods
 struct WorkerEvent: Event {
     const unsigned int worker_id;
 
@@ -244,9 +255,13 @@ struct WorkerEvent: Event {
 };
 
 
+// An Event for when an election proposal gets forwarded or discarded
+// only instantiable through the factory methods
 struct ProposalEvent: Event {
     const unsigned int worker_id;
     const unsigned int proposal_id;
+
+    operator std::string() override;
 
     static Event* proposal_forwarded(
         unsigned int worker_id, 
@@ -259,8 +274,6 @@ struct ProposalEvent: Event {
             proposal_id
         );
     }
-
-    operator std::string() override;
 
     static Event* proposal_discarded(
         unsigned int worker_id, 
@@ -287,6 +300,8 @@ struct ProposalEvent: Event {
 };
 
 
+// An Event for when Worker changes their colleagues
+// only instantiable through the factory methods
 struct ColleagueEvent: Event {
     const unsigned int worker_id;
     const unsigned int colleague_id;
@@ -342,6 +357,7 @@ struct ColleagueEvent: Event {
 };
 
 
+// A static and non-instantiable class for the factory methods for all events
 struct CreateEvent: 
     WorkerStatusChanged, 
     WorkerEvent, 

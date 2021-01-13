@@ -2,20 +2,18 @@
 #include "message.h"
 #include "presenter.h"
 
-#include <spdlog/spdlog.h>
 #include <chrono>
 #include <stdexcept>
 #include <thread>
-#include <cmath>
 
 using namespace std;
 
 
 bool Worker::assign_message_and_wait(Message* message) {
-    // 1 worker sleeptime should be expected at least
-    // 2 because it might get a message from the Ring
-    // 2.5 because there are processes besides just sleeping
-    // The waittime is at least 1s.
+    // one worker sleeptime should be expected at least,
+    // two, because it might get a message from the Ring,
+    // 2.5, because there are processes besides just sleeping,
+    // the waittime is at least 1s
     return message_buffer.assign_and_wait(
         message, 
         max(1000u, (unsigned int)(sleeptime * 2.5))
@@ -26,13 +24,13 @@ void Worker::assign_message(Message* message) {
     message_buffer.assign(message);
 }
 
-void Worker::set_neighbours(vector<Worker*> neighbours) {
-    if (neighbours.size() > 0) {
-        this->colleagues = neighbours;
+void Worker::set_colleagues(vector<Worker*> colleagues) {
+    if (colleagues.size() > 0) {
+        this->colleagues = colleagues;
     }
     else {
         throw invalid_argument(
-            "There must be at least on neighbour to which to send."
+            "There must be at least on colleagues to which to send."
         );
     }
 }

@@ -15,10 +15,11 @@ bool MessageBuffer::assign_and_wait(
 
     unique_lock<mutex> rendezvous_lck{rendezvous_mtx}; 
     message_is_taken = false;
-    rendezvous_lck.unlock();
 
     // rendezvous_lck beeing locked during assignment could cause a deadlock 
     //      in combination with another assign call and take
+    rendezvous_lck.unlock();
+    
     assign(message);
 
     rendezvous_lck.lock();

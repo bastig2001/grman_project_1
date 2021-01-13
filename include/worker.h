@@ -9,7 +9,7 @@
 
 
 // The return type for act_upon_message.
-// Represents the decision if the loop in operator() should continue, 
+// Represents the decision if the loop in operator() should continue 
 //                      or if it should finish.
 using ContinueOperation = bool;
 
@@ -30,9 +30,9 @@ class Worker {
     bool running{false};
     std::future<bool> previous_message_sent;
 
-    // Pointers to all Workers in the Ring, ordered by sending distance
-    // The closest Neighbour to which to send Messages is at index 0.
-    // Itself is at the last position in the vector.
+    // pointers to all Workers in the Ring, ordered by sending distance,
+    // the closest Neighbour, to which to send Messages, is at index 0,
+    // themselves are at the last position in the vector
     std::vector<Worker*> colleagues{};
 
     ContinueOperation act_upon_message(Message* message);
@@ -65,22 +65,24 @@ class Worker {
        id{id}
     {}
 
-    // Assigns a Message to the Worker's Message Buffer for execution 
-    // and blocks until it's taken.
-    // If it times out, it returns false otherwise true
+    // assigns a Message to the Worker's Message Buffer for execution 
+    //      and blocks until it's taken,
+    // if it times out, it returns false otherwise true
     bool assign_message_and_wait(Message* message);
 
-    // Assigns a Message to the Worker's Message Buffer for execution 
-    // but doesn't for it to be taken, only for it to be received by the Buffer.
+    // assigns a Message to the Worker's Message Buffer for execution, 
+    //      but doesn't wait for it to be taken, 
+    //      only for it to be received by the Buffer
     void assign_message(Message* message);
 
-    // The execution loop which handles all incoming Messages 
-    // and implements the functionalities for the concrete ring node.
+    // the execution loop which handles all incoming Messages 
+    //      and implements the functionalities for the concrete ring node
     void operator()();
 
-    // Sets the neighbours of the Worker.
-    // Throws invalid_argument when the vector is empty.
-    void set_neighbours(std::vector<Worker*> neighbours);
+    // sets the colleagues of the Worker, 
+    // i.e.: all Workers in the Ring including themselves
+    // throws invalid_argument when the vector is empty
+    void set_colleagues(std::vector<Worker*> colleagues);
 
     // if the worker is in the method operator()
     bool is_running() const;

@@ -48,7 +48,7 @@ void Ring::set_worker_neighbours() {
         vector<Worker*> neighbours{first_neighbour, workers.end()};
         neighbours.insert(neighbours.end(), workers.begin(), it + 1);
 
-        (*it)->set_neighbours(move(neighbours));
+        (*it)->set_colleagues(move(neighbours));
     }
 }
 
@@ -140,7 +140,7 @@ Ring::~Ring() {
 
 
 #ifdef UNIT_TEST
-#include "catch2/catch.hpp"
+#include <catch2/catch.hpp>
 
 TEST_CASE(
     "get_unique_ids returns the request amount of unique and random ids", 

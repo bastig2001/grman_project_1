@@ -1,7 +1,7 @@
 #include "config.h"
 
-#include "CLI11.hpp"
-#include "toml.hpp"
+#include <CLI11.hpp>
+#include <toml.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <memory>

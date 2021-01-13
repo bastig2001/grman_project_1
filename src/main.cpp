@@ -2,8 +2,8 @@
 #include "ring.h"
 #include "config.h"
 #include "presenter.h"
-#include "spdlog/common.h"
 
+#include <spdlog/common.h>
 #include <thread>
 #include <chrono>
 

@@ -7,7 +7,7 @@
 
 
 // A Message Buffer, which holds at most one element, 
-// meant for Communication between Workers.
+// meant for Communication between Workers
 class MessageBuffer {
   private:
     Message* message;
@@ -19,26 +19,26 @@ class MessageBuffer {
     std::condition_variable message_assignable; // if a message can be assigned
 
   public:
-    // Assigns a given Message to the Buffer.
-    // Blocks until the Message has been taken or it times out.
-    // Waittime is in milliseconds.
-    // If it times out, it returns false otherwise true
+    // assigns a given Message to the Buffer,
+    // blocks until the Message has been taken or it times out,
+    // waittime is in milliseconds,
+    // if it times out, it returns false otherwise true
     bool assign_and_wait(
         Message* message, 
         unsigned int waittime // in ms
     );
 
-    // Assigns a a given Message to the Buffer.
-    // Blocks when the previously assigned Message  
-    //   hasn't been taken yet, until it is taken.
+    // assigns a given Message to the Buffer,
+    // blocks when the previously assigned Message  
+    //   hasn't been taken yet, until it is taken
     void assign(Message* message);
 
-    // Returns the Message the Buffer holds;
-    // Blocks when there is no Message assigned after 
+    // returns the Message the Buffer holds,
+    // blocks when there is no Message assigned after 
     //   the last one has been taken, until there is.
     Message* take();
 
-    // Returns if the Buffer has no Message
+    // returns whether the Buffer has no Message
     bool is_empty();
 
     ~MessageBuffer();

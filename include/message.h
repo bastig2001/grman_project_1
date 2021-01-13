@@ -1,9 +1,9 @@
 #pragma once
 
-#include <fmt/core.h>
 #include <string>
 
-// The possible Types of Messages a Message-Object can represent.
+
+// The possible Types of Messages a Message-Object can represent
 enum class MessageType {
     NoMessage,
     LogMessage,
@@ -15,14 +15,15 @@ enum class MessageType {
     NewWorker
 };
 
-// A Message, meant to represent Information for Communication between Workers.
+
+// A Message, meant to represent Information for Communication between Workers,
 // It is not instantiable and only meant as a common Base Class.
 struct Message {
-    // The Type of the Message object
+    // the Type of the Message object
     const MessageType type;
 
-    // A more comfortable form of static casting for Message objects.
-    // Meant to be used to cast to the appropriate Subclass annotated by 'type'.
+    // a more comfortable form of static casting for Message objects,
+    // meant to be used to cast to the appropriate Subclass annotated by 'type'
     template<typename T>
     T* cast_to() {
         return static_cast<T*>(this);
@@ -38,7 +39,8 @@ struct Message {
     Message(MessageType type): type{type} {}
 };
 
-// A Message meant to represent nothing.
+
+// A Message meant to represent nothing
 struct NoMessage: Message {
     NoMessage(): Message(MessageType::NoMessage) {}
 
@@ -47,7 +49,8 @@ struct NoMessage: Message {
     }
 };
 
-// A Message which holds content for log/output.
+
+// A Message which holds content for log/output
 struct LogMessage: Message {
     const std::string content;
 
@@ -58,9 +61,10 @@ struct LogMessage: Message {
     {}
 
     explicit operator std::string() const override {
-        return fmt::format("Log Message containing '{}'", content);
+        return "Log Message containing '" + content + "'";
     }
 };
+
 
 // The Signal to stop
 struct Stop: Message {
@@ -71,6 +75,7 @@ struct Stop: Message {
     }
 };
 
+
 // The Signal to start a new election
 struct StartElection: Message {
     StartElection(): Message(MessageType::StartElection) {}
@@ -80,7 +85,8 @@ struct StartElection: Message {
     }
 };
 
-// A proposal for the election containing the id of the proposed leader.
+
+// A proposal for the election containing the id of the proposed leader
 struct ElectionProposal: Message {
     const unsigned int id;
 
@@ -91,22 +97,25 @@ struct ElectionProposal: Message {
     {}
 
     explicit operator std::string() const override {
-        return fmt::format("Election Propsal for {}", id);
+        return "Election Propsal for " + std::to_string(id);
     }
 };
 
-// A message containing the id of the newly elected leader.
+
+// A message containing the id of the newly elected leader
 struct Elected: Message {
     const unsigned int id;
 
     Elected(unsigned int id): Message(MessageType::Elected), id{id} {}
 
     explicit operator std::string() const override {
-        return fmt::format("Worker {} has been elected", id);
+        return "Worker " + std::to_string(id) + " has been elected";
     }
 };
 
-// A message containing the position of a worker marked dead which needs to be removed.
+
+// A message containing the position of a worker marked dead 
+//      who needs to be removed
 struct DeadWorker: Message {
     const unsigned int position;
 
@@ -117,13 +126,15 @@ struct DeadWorker: Message {
     {}
 
     explicit operator std::string() const override {
-        return fmt::format("Worker on position {} is marked dead", position);
+        return "Worker on position " + std::to_string(position) 
+             + " is marked dead";
     }
 }; 
 
+
 class Worker; // a forward declaration of Worker for NewWorker
 
-// A message containing the position of and pointer to a newly added worker.
+// A message containing the position of and pointer to a newly added worker
 struct NewWorker: Message {
     const unsigned int position;
 
@@ -138,6 +149,6 @@ struct NewWorker: Message {
     {}
 
     explicit operator std::string() const override {
-        return fmt::format("There is a new worker on position {}", position);
+        return "There is a new worker on position " + std::to_string(position);
     }
 };

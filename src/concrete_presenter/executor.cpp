@@ -12,14 +12,13 @@ void ConcretePresenter::execute(const string& command) {
 
 void ConcretePresenter::define_command_parser() {
     command_parser = (R"(
-        Procedure     <- Help / List / Exit / StartElection / Stop / Start / Restart
+        Procedure     <- Help / List / Exit / StartElection / Stop / Start
         Help          <- 'help'i / 'h'i
         List          <- 'show'i / 'list'i / 'ls'
         Exit          <- 'quit'i / 'q'i / 'exit'i
         StartElection <- 'start-election'i Pos?
         Stop          <- 'stop'i Pos+
         Start         <- 'start'i Pos+
-        Restart       <- 'restart'i
         Pos           <- UInt
         UInt          <- < [0-9]+ >
 
@@ -42,8 +41,6 @@ void ConcretePresenter::define_command_parser() {
         [this](const SemanticValues& values){ stop_worker(values); };
     command_parser["Start"] = 
         [this](const SemanticValues& values){ start_worker(values); };
-    command_parser["Restart"] =
-        [this](const SemanticValues&){ restart_ring(); };
     command_parser["Pos"] = 
         [](const SemanticValues& values){
             return any_cast<unsigned int>(values[0]);
@@ -63,7 +60,6 @@ void ConcretePresenter::print_help() {
         "  start-election [POS]  starts an election with the Worker at the given position or at position 0\n"
         "  stop POS ...          stops the Workers at the given positions\n"
         "  start POS ...         starts the Workers at the given positions\n"
-        "  restart               recreates and restarts all Workers with new random ids\n"
         "\n"
         "  POS  is an unsigned integer\n"
     );
@@ -84,7 +80,7 @@ void ConcretePresenter::start_election(const SemanticValues& values) {
             println("Starting Election...");
         }
         else {
-            eprintln("There is no Worker on position ", position, "!");
+            eprintln("There is no Worker on position ", position, ".");
         }
     }
 }

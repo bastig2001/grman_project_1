@@ -1,13 +1,12 @@
 #pragma once
 
-#include "fmt/color.h"
 #include "presenter.h"
 #include "ring.h"
 
-#include "peglib.h"
-#include "spdlog/common.h"
-#include <memory>
+#include <fmt/color.h>
+#include <peglib.h>
 #include <spdlog/spdlog.h>
+#include <memory>
 #include <mutex>
 #include <condition_variable>
 #include <functional>
@@ -15,6 +14,7 @@
 #include <iostream>
 
 
+// The conrete implementation of Presenter used as the user interface
 class ConcretePresenter: public Presenter {
   private:
     const std::string prompt{"> "};
@@ -22,6 +22,7 @@ class ConcretePresenter: public Presenter {
 
     Ring* ring{};
 
+    /* logging, implemented in concrete_presenter/presenter.cpp */
     std::shared_ptr<spdlog::logger> console_logger;
     std::shared_ptr<spdlog::logger> file_logger;
 
@@ -29,12 +30,12 @@ class ConcretePresenter: public Presenter {
     std::function<void(spdlog::level::level_enum, const std::string&)> 
         log_to_console{[](spdlog::level::level_enum, const std::string&){}};
 
+    /* command line, implemented in concrete_presenter/command_line.cpp */
     bool running{false};
     std::thread command_line_thread;
     std::mutex running_mtx;
     std::condition_variable exited;
 
-    std::mutex output_mtx;
     std::string input{};
     std::string ctrl_sequence{};
     bool in_esc_mode{false};
@@ -51,6 +52,7 @@ class ConcretePresenter: public Presenter {
     void write_char(char output_char);
     void write_user_input(unsigned int start_index);
 
+    /* command execution, implemented in concrete_presenter/executor.cpp */
     peg::parser command_parser{};
     void define_command_parser();
 
@@ -65,6 +67,7 @@ class ConcretePresenter: public Presenter {
     void print_error(size_t column, const std::string& err_msg);
     void exit();
 
+    /* event presentation, implemented in concrete_presenter/presenter.cpp */
     void ring_started();
     void ring_stopped();
     void says(Says* event);
@@ -75,6 +78,9 @@ class ConcretePresenter: public Presenter {
     void proposal_forwarded(ProposalEvent* event);
     void proposal_discarded(ProposalEvent* event);
     void dead_neighbour_recognized(ColleagueEvent* event);
+
+    /* output, implemented in concrete_presenter/command_line.cpp */
+    std::mutex output_mtx;
 
     template<typename... Args>
     void println(const Args&... args) {
@@ -109,19 +115,29 @@ class ConcretePresenter: public Presenter {
         set_log_to_console();
     }
 
+    /* implemented in concrete_presenter/presenter.cpp */
     ~ConcretePresenter();
 
+    // ring needs to be set before starting the command line,
+    // throws invalid_argument when the given pointer is a null_ptr
     void set_ring(Ring* ring);
 
+    // shows to the user and/or logs the given event
     void show(Event* event) override;
 
+    // logs with both loggers
     void log(spdlog::level::level_enum level, const std::string& message);
 
+    /* implemented in concrete_presenter/command_line.cpp */
+    // starts/stops the command line in a different thread,
+    // throws invalid_argument when the ring hasn't been set
     void start_command_line();
     void stop_command_line();
 
+    // waits for the command line to exit
     void wait_for_exit();
 
+    // the method which implements the command line
     void operator()();
 };
 

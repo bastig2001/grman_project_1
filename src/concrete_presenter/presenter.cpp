@@ -1,7 +1,6 @@
 #include "concrete_presenter.h"
 
 #include <fmt/color.h>
-#include <iostream>
 #include <stdexcept>
 
 using namespace std;

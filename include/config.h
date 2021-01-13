@@ -38,7 +38,11 @@ struct ConfigExit {
     {}
 };
 
+// gets the configuration from the user
 ConfigExit configure(int argc, char* argv[], Config& config);
 
+// returns a file logger with a start message in the log
+// or a turned off console logger 
+//      when there is no log_file specified in the config
 std::shared_ptr<spdlog::logger> get_and_start_file_logger(const Config& config);
 std::shared_ptr<spdlog::logger> get_console_logger(const Config& config);

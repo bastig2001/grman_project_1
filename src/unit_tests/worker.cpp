@@ -1,8 +1,7 @@
-#include "presenter.h"
 #ifdef UNIT_TEST
 #include "worker.h"
 
-#include "catch2/catch.hpp"
+#include <catch2/catch.hpp>
 #include <tuple>
 #include <cmath>
 #include <thread>
@@ -28,7 +27,7 @@ TEST_CASE(
 
     Worker dummy_worker(dummy_id, 0, 0, &no_presenter);
     Worker worker(worker_id, 0, 0, &no_presenter);
-    worker.set_neighbours({&dummy_worker});
+    worker.set_colleagues({&dummy_worker});
 
     thread worker_thread{ref(worker)};
     sleep();
@@ -156,7 +155,7 @@ TEST_CASE(
     
     vector<Worker*> neighbours{};
     neighbours.assign(number_of_workers, &dummy_worker);
-    worker.set_neighbours(move(neighbours));
+    worker.set_colleagues(move(neighbours));
 
     thread worker_thread{ref(worker)};
     sleep();
@@ -247,7 +246,7 @@ TEST_CASE(
     
     vector<Worker*> neighbours{};
     neighbours.assign(number_of_workers, &worker);
-    worker.set_neighbours(move(neighbours));
+    worker.set_colleagues(move(neighbours));
 
     SECTION("Worker is able to calculate the index for a neighbour position") {
         tuple<unsigned int, unsigned int> pos_idx_pair{GENERATE(
@@ -268,7 +267,7 @@ TEST_CASE(
 
         vector<Worker*> neighbours{};
         neighbours.assign(number_of_workers, &worker);
-        worker.set_neighbours(move(neighbours));
+        worker.set_colleagues(move(neighbours));
 
         CHECK(worker.get_direct_neighbour_position() == (worker_position + 1) % number_of_workers);
     }

@@ -1,6 +1,6 @@
 #include "message_buffer.h"
 
-#include "catch2/catch.hpp"
+#include <catch2/catch.hpp>
 #include <chrono>
 #include <tuple>
 #include <thread>
