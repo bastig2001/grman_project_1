@@ -176,7 +176,7 @@ void ConcretePresenter::update_input(const string& input) {
     lock_guard<mutex> output_lock{output_mtx};
 
     current_input = input;
-    cursor_position = min(cursor_position, current_input.size());
+    cursor_position = current_input.size();
 
     write_user_input();
 }
