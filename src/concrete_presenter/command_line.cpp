@@ -105,6 +105,12 @@ void ConcretePresenter::handle_input_key_in_esc_mode(char input_char) {
         // expecting more keys
         in_esc_mode = true;
     }
+    else if (ctrl_sequence == "[A") { // arrow key up
+        show_history_up();
+    }
+    else if (ctrl_sequence == "[B") { // arrow key down
+        show_history_down();
+    }
     else if (ctrl_sequence == "[C") { // arrow key right
         move_cursor_right();
     }
@@ -141,8 +147,42 @@ void ConcretePresenter::handle_input_key_in_regular_mode(char input_char) {
     }
 }
 
+void ConcretePresenter::show_history_up() {
+    if (next_input_history_index < input_history.size()) {
+        if (next_input_history_index == 0) {
+            original_input = current_input;
+        }
+
+        update_input(input_history[next_input_history_index]);
+
+        next_input_history_index++;
+    }
+}
+
+void ConcretePresenter::show_history_down() {
+    if (next_input_history_index > 1) {
+        next_input_history_index--;
+
+        update_input(input_history[next_input_history_index - 1]);
+    }
+    else if (next_input_history_index == 1) {
+        next_input_history_index = 0;
+
+        update_input(original_input);
+    }
+}
+
+void ConcretePresenter::update_input(const string& input) {
+    lock_guard<mutex> output_lock{output_mtx};
+
+    current_input = input;
+    cursor_position = min(cursor_position, current_input.size());
+
+    write_user_input();
+}
+
 void ConcretePresenter::move_cursor_right() {
-    if (cursor_position < input.size()) {
+    if (cursor_position < current_input.size()) {
         lock_guard<mutex> output_lock{output_mtx};
 
         cursor_position++;
@@ -160,10 +200,10 @@ void ConcretePresenter::move_cursor_left() {
 }
 
 void ConcretePresenter::do_delete() {
-    if (cursor_position < input.size()) {
+    if (cursor_position < current_input.size()) {
         lock_guard<mutex> output_lock{output_mtx};
 
-        input.erase(cursor_position, 1);
+        current_input.erase(cursor_position, 1);
         write_user_input(cursor_position);
     }
 }
@@ -172,9 +212,9 @@ void ConcretePresenter::do_backspace() {
     if (cursor_position > 0) {
         lock_guard<mutex> output_lock{output_mtx};
 
-        unsigned int char_to_remove_index{cursor_position - 1};
+        unsigned long char_to_remove_index{cursor_position - 1};
         cursor_position--;
-        input.erase(char_to_remove_index, 1);
+        current_input.erase(char_to_remove_index, 1);
         write_user_input(char_to_remove_index);
     }
 }
@@ -182,8 +222,9 @@ void ConcretePresenter::do_backspace() {
 void ConcretePresenter::handle_newline() {
     unique_lock<mutex> output_lock{output_mtx};
 
-    string command{input};
-    input = "";
+    update_input_history(current_input);
+    string command{current_input};
+    current_input = "";
     cursor_position = 0;
 
     cout << "\n> " << flush;
@@ -193,20 +234,32 @@ void ConcretePresenter::handle_newline() {
     execute(command);
 }
 
+void ConcretePresenter::update_input_history(const string& input) {
+    next_input_history_index = 0;
+
+    if (input_history.size() == 0 || input != input_history[0]) {
+        if (input_history.size() == max_input_history_size) {
+            input_history.erase(input_history.end() - 1);
+        }
+
+        input_history.insert(input_history.begin(), input);
+    }
+}
+
 void ConcretePresenter::write_char(char output_char) {
     lock_guard<mutex> output_lock{output_mtx};
 
     cursor_position++;
 
-    if (cursor_position < input.size() - 1) {
-        input.insert(
-            input.begin() + cursor_position - 1, 
+    if (cursor_position < current_input.size() - 1) {
+        current_input.insert(
+            current_input.begin() + cursor_position - 1, 
             output_char
         );
         write_user_input(cursor_position - 1);
     }
     else {
-        input += output_char;
+        current_input += output_char;
         cout << output_char << flush;
     }
 }
@@ -214,7 +267,7 @@ void ConcretePresenter::write_char(char output_char) {
 void ConcretePresenter::write_user_input(unsigned int start_index) {
     cout << "\r\33[" << prompt_length + start_index << "C"     // move to position of first char to change
          << "\33[K"                                            // clear all chars to right of cursor
-         << input.substr(start_index)                          // new user input
+         << current_input.substr(start_index)                  // new user input
          << "\r\33[" << prompt_length + cursor_position << "C" // move cursor to previous position
          << flush; 
 }
@@ -224,7 +277,7 @@ void ConcretePresenter::clear_line() {
 }
 
 void ConcretePresenter::print_prompt_and_user_input() {
-    cout << prompt << input                                    // prompt and user input
+    cout << prompt << current_input                            // prompt and user input
          << "\r\33[" << prompt_length + cursor_position << "C" // move cursor to previous position
          << flush;
 }

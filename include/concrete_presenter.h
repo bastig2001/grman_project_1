@@ -12,6 +12,7 @@
 #include <functional>
 #include <thread>
 #include <iostream>
+#include <vector>
 
 
 // The conrete implementation of Presenter used as the user interface
@@ -36,21 +37,30 @@ class ConcretePresenter: public Presenter {
     std::mutex running_mtx;
     std::condition_variable exited;
 
-    std::string input{};
+    const unsigned int max_input_history_size{100};
+    std::vector<std::string> input_history{};
+    unsigned int next_input_history_index{0};
+    std::string current_input{""};
+    std::string original_input{};
+
     std::string ctrl_sequence{};
     bool in_esc_mode{false};
-    unsigned int cursor_position{0};
+    unsigned long cursor_position{0};
 
     void handle_input_key(char input_char);
     void handle_input_key_in_esc_mode(char input_char);
     void handle_input_key_in_regular_mode(char input_char);
+    void show_history_up();
+    void show_history_down();
+    void update_input(const std::string& input);
     void move_cursor_right();
     void move_cursor_left();
     void do_delete();
     void do_backspace();
     void handle_newline();
+    void update_input_history(const std::string& input);
     void write_char(char output_char);
-    void write_user_input(unsigned int start_index);
+    void write_user_input(unsigned int start_index = 0);
 
     /* command execution, implemented in concrete_presenter/executor.cpp */
     peg::parser command_parser{};
