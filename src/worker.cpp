@@ -30,7 +30,7 @@ void Worker::set_colleagues(vector<Worker*> colleagues) {
     }
     else {
         throw invalid_argument(
-            "There must be at least on colleagues to which to send."
+            "There must be at least one colleague to which to send."
         );
     }
 }
@@ -246,7 +246,7 @@ unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
         return position - this->position - 1;
     }
     else {
-        return position - this->position - 1 + colleagues.size();
+        return position + colleagues.size() - this->position - 1;
     }
 }
 

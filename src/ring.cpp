@@ -91,6 +91,23 @@ void Ring::start() {
     presenter->show(CreateEvent::ring_started());
 }
 
+bool Ring::start(unsigned int worker_position) {
+    if (worker_position < workers.size()) {
+        if (!workers[worker_position]->is_running()) {
+            worker_threads[worker_position] = 
+                thread{ref(*workers[worker_position])};
+            presenter->show(CreateEvent::worker_started(
+                workers[worker_position]->id, worker_position
+            ));
+        }
+
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 void Ring::start_election() {
     if (worker_threads.size() > 0) {
         workers[0]->assign_message(new StartElection());
@@ -143,6 +160,26 @@ void Ring::stop() {
     running = false;
 
     presenter->show(CreateEvent::ring_stopped());
+}
+
+bool Ring::stop(unsigned int worker_position) {
+    if (worker_position < workers.size()) {
+        if (worker_threads[worker_position].joinable() 
+            && 
+            workers[worker_position]->is_running()
+        ) {
+            workers[worker_position]->assign_message(new Stop());
+            worker_threads[worker_position].join();
+            presenter->show(CreateEvent::worker_Stopped(
+                workers[worker_position]->id, worker_position
+            ));
+        }
+
+        return true;
+    }
+    else {
+        return false;
+    } 
 }
 
 Ring::~Ring() {

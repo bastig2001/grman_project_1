@@ -34,13 +34,17 @@ class Ring {
     // starts all Workers in separate threads
     void start();
 
+    // starts the worker on the given position,
+    // returns false when there is no worker on the given position
+    bool start(unsigned int worker_position);
+
     // starts an election among the Workers on position 0 in the ring
     //      according to the Chang and Roberts Algorithm
     void start_election();
 
     // starts an election among the Workers on the given position in the ring
     //      according to the Chang and Roberts Algorithm,
-    // returns true if the election was started successfully
+    // returns false when there is no worker on the given position
     bool start_election_at_position(unsigned int worker_position);
 
     // returns a vector with the id, position and status of each worker
@@ -49,4 +53,8 @@ class Ring {
 
     // stops all Workers and joins their threads
     void stop();
+
+    // stops the worker on the given position
+    // returns false when there is no worker on the given position
+    bool stop(unsigned int worker_position);
 };

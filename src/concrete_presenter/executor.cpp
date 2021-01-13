@@ -1,5 +1,7 @@
 #include "concrete_presenter.h"
+#include "peglib.h"
 
+#include <any>
 #include <sstream>
 #include <string>
 
@@ -91,25 +93,30 @@ void ConcretePresenter::start_election(const SemanticValues& values) {
     else {
         unsigned int position{any_cast<unsigned int>(values[0])};
 
-        if (ring->start_election_at_position(position)) {
-            println("Starting Election...");
-        }
-        else {
+        if (!ring->start_election_at_position(position)) {
             eprintln("There is no Worker on position ", position, ".");
         }
     }
 }
 
-void ConcretePresenter::stop_worker(const SemanticValues&) {
+void ConcretePresenter::stop_worker(const SemanticValues& values) {
+    for (auto value : values) {
+        unsigned int position{any_cast<unsigned int>(value)};
 
+        if (!ring->stop(position)) {
+            eprintln("There is no Worker on position ", position, ".");
+        }
+    }
 }
 
-void ConcretePresenter::start_worker(const SemanticValues&) {
+void ConcretePresenter::start_worker(const SemanticValues& values) {
+    for (auto value : values) {
+        unsigned int position{any_cast<unsigned int>(value)};
 
-}
-
-void ConcretePresenter::restart_ring() {
-    
+        if (!ring->start(position)) {
+            eprintln("There is no Worker on position ", position, ".");
+        }
+    }
 }
 
 void ConcretePresenter::print_error(size_t column, const string& err_msg) {

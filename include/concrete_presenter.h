@@ -73,7 +73,6 @@ class ConcretePresenter: public Presenter {
     void start_election(const peg::SemanticValues& values);
     void stop_worker(const peg::SemanticValues& values);
     void start_worker(const peg::SemanticValues& values);
-    void restart_ring();
     void print_error(size_t column, const std::string& err_msg);
     void exit();
 
