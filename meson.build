@@ -1,6 +1,6 @@
 project('grman_project_1', 'cpp',
         license : ['Boost'],
-        version : '0.3',
+        version : '1.1',
         default_options : ['cpp_std=c++17', 'warning_level=3', 'werror=true'])
 
 thread_dep = dependency('threads')
@@ -13,7 +13,7 @@ add_global_arguments('-DASIO_NO_DEPRECATED', language : 'cpp')
 
 # Catch2: https://github.com/catchorg/Catch2
 # add_global_arguments('-I' + get_option('catch2_include_dir'), language : 'cpp')
-catch2 = dependency('catch2')
+# catch2 = dependency('catch2')
 
 # CLI11: https://github.com/CLIUtils/CLI11
 add_global_arguments('-I' + get_option('cli11_include_dir'), language : 'cpp')
@@ -22,8 +22,8 @@ add_global_arguments('-I' + get_option('cli11_include_dir'), language : 'cpp')
 add_global_arguments('-I' + get_option('peglib_include_dir'), language : 'cpp')
 
 # fmt: https://github.com/fmtlib/fmt
-# add_global_arguments('-I' + get_option('fmt_include_dir'), language : 'cpp')
-fmt = dependency('fmt')
+add_global_arguments(['-I' + get_option('fmt_include_dir'), '-DFMT_HEADER_ONLY'], language : 'cpp')
+# fmt = dependency('fmt')
 
 # spdlog: https://github.com/gabime/spdlog
 # add_global_arguments('-I' + get_option('spdlog_include_dir'), language : 'cpp')
@@ -54,12 +54,13 @@ unit_tests_src = [
 executable('ring_voting',
            sources : ['src/main.cpp'] + src,
            include_directories : inc_dir,
-           dependencies : [thread_dep, fmt, spdlog]
+           dependencies : [thread_dep]
           )
 
 executable('unit_tests',
            sources : unit_tests_src + src,
            include_directories : inc_dir,
-           dependencies : [thread_dep, fmt, spdlog, catch2],
-           cpp_args: '-DUNIT_TEST'
+           dependencies : [thread_dep],
+           cpp_args: ['-DUNIT_TEST', 
+                      '-I' + get_option('catch2_include_dir')]
           )

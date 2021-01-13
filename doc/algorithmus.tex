@@ -1,0 +1,76 @@
+\section{Algorithmus}
+
+Ein Wahlalgorithmus, welcher sich für ein verteiltes System mit der Topologie eines Ringes eignet, ist der Algorithmus nach 
+\textit{Chang und Roberts}\cite{ChangRoberts79}.Dieser ist insbesondere für gerichtete Ringe angebracht, da sämtliche Kommunikation 
+nur in eine Richtung ausgeführt wird.
+
+
+\subsection{Anforderungen und Annahmen}
+\label{sec:anf-an}
+
+Die grundlegendsten Anforderungen an ein jeden Wahlalgorithmus in einem verteilten System sind:
+\begin{itemize}
+    \item Nach Ende der Wahl muss es genau einen Leiter geben.
+    \item Nach Ende der Wahl wissen alle Prozesse, wer der neue Leiter ist.
+\end{itemize}
+
+Diese Anforderungen kann der Chang-Roberts-Algorithmus grundsätzlich erfüllen. Damit der Algorithmus auch wirklich wie erwartet funktioniert, müssen
+noch folgende Annahmen über das System zutreffen\cite{bonakdarpur}:
+\begin{itemize}
+    \item Der Algorithmus ist dezentral, d.h. jeder Prozess ist in der Lage den Algorithmus, also eine Wahl, zu initiieren.
+    \item Jeder Prozess hat eine unter allen Prozessen einmalig vorkommende Kennung, \textit{Id}, und diese \textit{Id}s unterliegen einer Totalordnung. 
+    \item Alle Prozesse agieren bei der Wahl lokal nach dem selben Algorithmus.
+\end{itemize}
+
+Treffen diese Annahmen zu, so wird der Chang-Roberts-Algorithmus wie erwartet funktionieren 
+und dem System zu genau einem Leiter, der allen bekannt ist, verhelfen.
+
+\subsection{Ablauf}
+\label{sec:ablauf}
+
+Beim Chang-Roberts-Wahlalgorithmus wird der Prozess mit der größten Id zum Leiter ernannt. Der Ablauf, wie man zu diesem Endstand kommt sieht wie folgt aus:
+\begin{enumerate}
+    \item Der Ausgangspunkt ist, dass kein Prozess an einer Wahl teilnimmt.
+    \item Ein Prozess, der das Fehlen eines Leiters bemerkt, leitet eine Wahl ein. 
+          Er stellt sich selber zur Wahl auf, indem er eine Nachricht mit seiner Id als Wahlvorschlag an seinen Nachbarn schickt -- da die Wahl in einem 
+          gerichteten bzw. unidirektionalen Ring stattfindet, hat jeder Prozess nur einen Nachbarn, an den er schicken kann, und einen, von dem er empfängt 
+          -- und markiert sich selber als Wahlteilnehmer.
+    \item Jeder Prozess, der einen Wahlvorschlag erhält und
+          \begin{enumerate}
+              \item noch kein Wahlteilnehmer ist, markiert sich als Wahlteilnehmer und
+                    \begin{enumerate}
+                        \item sendet den Wahlvorschlag weiter, wenn seine Id niedriger als die vorgeschlagene ist.
+                        \item sendet seine eigene Id als Wahlvorschlag an seinen Nachbarn, wenn diese höher als die vorgeschlagene ist.
+                        \item der Vorschlag kann nicht gleich der eigenen Id sein, da jeder Prozess eine einmalige hat (siehe Annahmen \ref{sec:anf-an}).
+                    \end{enumerate}
+                \item bereits Wahlteilnehmer ist, 
+                    \begin{enumerate}
+                        \item ignoriert den Wahlvorschlag, wenn dieser niedriger als die eigene Id ist -- dadurch werden überflüssige Wahlen vorzeitig 
+                              beendet.
+                        \item sendet den Wahlvorschlag weiter, wenn sein Id niedriger als die vorgeschlagene ist -- ein anderer Prozess mit einer höheren Id
+                              wird die überflüssige Wahl beenden.
+                        \item wird zum neuen Leiter und beginnt die Wahl zu beenden, wenn der Vorschlag gleich der eigenen Id ist.
+                    \end{enumerate}
+          \end{enumerate}
+    \item Wenn ein Prozess zum neuen Leiter gewählt wurde, bedeutet es, dass sein Wahlvorschlag mit seiner Id eine ganze Runde bis zu ihm zurück 
+          gemacht hat. Man kann sich also sicher sein, dass er die höchste Id von allen Prozessen im Ring hat. Der Prozess beendet nun seine Wahlteilnahme
+          und beginnt die Wahl zu beenden, indem eine Nachricht, dass er die Wahl gewonnen hat, mit seiner Id an seinen Nachbarn schickt.
+    \item Jeder nicht gewählte Prozess beendet ebenfalls seine Wahlteilnahme, sobald ihn die Nachricht vom Wahlsieger erreicht hat, und leitet diese weiter.
+    \item Hat die Nachricht vom Wahlsieg eine ganze Runde gemacht und ist beim Wahlsieger und Leiter wieder angelangt, leitet dieser sie nicht mehr weiter
+          und die Wahl ist beendet.
+\end{enumerate}
+
+Sofern die Kommunikation fehlerfrei abgelaufen ist, also alle Prozesse vollständig an der ganzen Wahl teilnahmen und keine Nachrichten verloren gingen,
+hat man am Ende ein System, das sich bereits wieder im Ausgangszustand für eine mögliche nächste Wahl befindet -- kein Prozess ist als Wahlteilnehmer 
+markiert --, mit einem Leiter und alle wissen wer dieser ist.
+
+Für einen erfolgreichen Wahlablauf benötigt man bei $n$ Prozessen im Ring und einem Initiator im ungünstigsten Fall $3n-1$ Nachrichten je zwischen zwei 
+Nachbarn. Dieser ungünstigste Fall tritt ein, wenn der Initiator der Nachbar nach dem prädestinierten Leiter, dem Prozess mit der höchsten Id, ist.
+In diesem Fall braucht es $n-1$ Nachrichten, damit der prädestinierte Wahlsieger an der Wahl teilnimmt und sich vorschlägt, $n$ Nachrichten, damit ihn
+sein Vorschlag wieder erreicht und er gewählt ist, und weitere $n$ Nachrichten, damit alle anderen auch davon erfahren.
+
+\subsection{Alternativen}
+
+Der Chang-Roberts-Algorithmus ist durchaus nicht der effizienteste Wahlalgorithmus, den man im Ring verwenden kann. So gibt es zum Beispiel
+\textit{Franklins Algorithmus}\cite{franklin82} für ungerichtete Ringe und den \textit{Dolev-Klawe-Rodeh-Algorithmus}, welcher versucht Verbesserungen von 
+Franklins Algorithmus auf gerichtete Ringe zu bringen\cite{bonakdarpur}.
