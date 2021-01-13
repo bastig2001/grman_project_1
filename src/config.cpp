@@ -1,6 +1,4 @@
 #include "config.h"
-#include "presenters/console_writer.h"
-#include "presenters/command_line.h"
 
 #include "CLI11.hpp"
 #include "toml.hpp"
@@ -13,9 +11,6 @@
 using namespace std;
 
 int get_file_config(const string&, Config&);
-shared_ptr<spdlog::logger> get_and_start_logger(const Config&);
-shared_ptr<spdlog::logger> get_and_start_file_logger(const Config&);
-shared_ptr<spdlog::logger> get_console_logger();
 void write_log_start(shared_ptr<spdlog::logger>&);
 
 
@@ -55,32 +50,31 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
             "  Default is a sleeptime of 500 milliseconds"
     );
     app.add_flag(
-        "--log",
-        config.logging_enabled,
-        "Enables logging\n"
-            "  Default logging level is INFO\n"
-            "  Default logging output is the console"
+        "--log-console",
+        config.log_to_console,
+        "Logs to the console"
     );
     app.add_option(
         "--log-file",
         config.log_file_name,
-        "Sets the file as log output and enables logging"
+        "Logs to the given file"
     );
     app.add_flag(
         "--log-date",
         config.log_date,
-        "Logs the date additionally to the time, when logging to a file"
+        "Logs the date additionally to the time when logging to a file"
     );
     app.add_option(
         "--log-level",
-        config.logging_level,
-        "Sets the visible logging level and enables logging\n"
-            "  0 ... TRACE\n"
-            "  1 ... DEBUG\n"
-            "  2 ... INFO\n"
-            "  3 ... WARN\n"
-            "  4 ... ERROR\n"
-            "  5 ... CRITICAL"
+        config.general_logging_level,
+        "Sets the lowest visible logging level\n"
+            "    0 ... TRACE\n"
+            "    1 ... DEBUG\n"
+            "    2 ... INFO\n"
+            "    3 ... WARN\n"
+            "    4 ... ERROR\n"
+            "    5 ... CRITICAL\n"
+            "  Default is INFO."
     );
     app.add_flag(
         "--no-config-log",
@@ -111,13 +105,12 @@ ConfigExit configure(int argc, char* argv[], Config& config) {
         CLI11_PARSE(app, argc, argv);
     }
 
-    config.is_file_logger = config.log_file_name != "";
+    if (config.log_to_console) {
+        config.console_logging_level = config.general_logging_level;
+    }
 
-    if ((config.logging_enabled || config.is_file_logger) 
-            && 
-         config.logging_level == spdlog::level::off
-    ) {
-        config.logging_level = spdlog::level::info;
+    if (config.log_file_name != "") {
+        config.file_logging_level = config.general_logging_level;
     }
 
     return false; // Default return, program is not supposed to exit immediately
@@ -140,17 +133,17 @@ int get_file_config(const string& file_name, Config& config) {
             file_config["ring"]["worker"]["sleeptime"]
             .value_or(config.worker_sleeptime);
 
-        config.logging_enabled = 
-            file_config["log"]["enabled"]
-            .value_or(config.logging_enabled);
+        config.log_to_console = 
+            file_config["log"]["console"]
+            .value_or(config.log_to_console);
         config.log_file_name = 
             file_config["log"]["file"].value_or(config.log_file_name);
         config.log_date = 
             file_config["log"]["include_date"]
             .value_or(config.log_date);
-        config.logging_level = (spdlog::level::level_enum)
+        config.general_logging_level = (spdlog::level::level_enum)
             file_config["log"]["level"]
-            .value_or((int)config.logging_level);
+            .value_or((int)config.general_logging_level);
         config.no_config_log =
             file_config["log"]["no_config_log"]
             .value_or(config.no_config_log);
@@ -173,55 +166,34 @@ int get_file_config(const string& file_name, Config& config) {
     return 0; // Default return, no parsing issues
 }
 
-Presenter* get_and_start_presenter(const Config& config) {
-    auto console_writer{
-        new ConsoleWriter(get_and_start_logger(config), config.is_file_logger)
-    };
-
-    if (config.use_command_line) {
-        return new CommandLine(console_writer);
-    } 
-    else {
-        return console_writer;
-    }
-}
-
-shared_ptr<spdlog::logger> get_and_start_logger(const Config& config) {
-    shared_ptr<spdlog::logger> logger{};
-
-    if (config.is_file_logger) {
-        logger = get_and_start_file_logger(config); 
-    }
-    else {
-        logger = get_console_logger();
-    }
-    
-    logger->set_level(config.logging_level);
-
-    if (!config.no_config_log) {
-        logger->debug("The configuration looks as follows:\n{}", (string)config);
-    }
-
-    return logger;
-}
-
 shared_ptr<spdlog::logger> get_and_start_file_logger(const Config& config) {
-    try {
-        auto logger{spdlog::basic_logger_mt("logger", config.log_file_name)};
-
-        write_log_start(logger);
-
-        string date_pattern{
-            config.log_date
-            ? "%Y-%m-%d "
-            : ""
-        };
-        logger->set_pattern("[" + date_pattern + "%T.%e] [%l] %v");
+    if (config.log_file_name == "") {
+        auto logger{spdlog::stdout_logger_st("no file")};
+        logger->set_level(spdlog::level::off);
 
         return logger;
-    } catch (const spdlog::spdlog_ex& err) {
-        cerr << "Writing the log failed:\n" << err.what() << endl;
-        exit(3);
+    }
+    else {
+        try {
+            auto logger{
+                spdlog::basic_logger_mt("file", config.log_file_name)
+            };
+
+            write_log_start(logger);
+
+            string date_pattern{
+                config.log_date
+                ? "%Y-%m-%d "
+                : ""
+            };
+            logger->set_pattern("[" + date_pattern + "%T.%e] [%l] %v");
+            logger->set_level(config.file_logging_level);
+
+            return logger;
+        } catch (const spdlog::spdlog_ex& err) {
+            cerr << "Writing the log failed:\n" << err.what() << endl;
+            exit(3);
+        }
     }
 }
 
@@ -236,10 +208,11 @@ void write_log_start(shared_ptr<spdlog::logger>& logger) {
     logger->info("=========================================================");
 }
 
-shared_ptr<spdlog::logger> get_console_logger() {
-    auto logger{spdlog::stdout_logger_mt("logger")};
+shared_ptr<spdlog::logger> get_console_logger(const Config& config) {
+    auto logger{spdlog::stdout_logger_mt("console")};
 
-    logger->set_pattern("%v");
+    logger->set_pattern("[%l] %v");
+    logger->set_level(config.console_logging_level);
 
     return logger;
 }
@@ -247,15 +220,17 @@ shared_ptr<spdlog::logger> get_console_logger() {
 Config::operator string() const {
     ostringstream output{};
     output << boolalpha
-           << "Size:                       " << number_of_workers        << "\n"
-           << "Config File:                " << config_file              << "\n"
-           << "Number of Elections:        " << number_of_elections      << "\n"
-           << "Sleeptime:                  " << after_election_sleeptime << " ms\n"
-           << "Worker Sleeptime:           " << worker_sleeptime         << " ms\n"
-           << "Logging enabled explicitly: " << logging_enabled          << "\n"
-           << "Log File:                   " << log_file_name            << "\n"
-           << "Log Dates in File:          " << log_date                 << "\n"
-           << "Logging Level:              " << logging_level;
+           << "Size:                    " << number_of_workers        << "\n"
+           << "Config File:             " << config_file              << "\n"
+           << "Number of Elections:     " << number_of_elections      << "\n"
+           << "Sleeptime:               " << after_election_sleeptime << " ms\n"
+           << "Worker Sleeptime:        " << worker_sleeptime         << " ms\n"
+           << "Console Logging enabled: " << log_to_console           << "\n"
+           << "Log File:                " << log_file_name            << "\n"
+           << "Log Dates in File:       " << log_date                 << "\n"
+           << "Logging Level:           " << general_logging_level    << "\n"
+           << "Log this Config:         " << !no_config_log           << "\n"
+           << "Start Command Line:      " << use_command_line         << "\n";
     
     return output.str();
 }

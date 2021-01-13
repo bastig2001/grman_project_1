@@ -1,10 +1,11 @@
 #pragma once
 
 #include "worker.h"
-#include "presenters/presenter.h"
+#include "presenter.h"
 
 #include <vector>
 #include <thread>
+
 
 // A Ring meant to construct and manage Workers in form of a ring topology.
 class Ring {

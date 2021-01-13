@@ -1,11 +1,12 @@
 #pragma once
 
 #include "message_buffer.h"
-#include "presenters/presenter.h"
+#include "presenter.h"
 
 #include <chrono>
 #include <vector>
 #include <future>
+
 
 // The return type for act_upon_message.
 // Represents the decision if the loop in operator() should continue, 
@@ -19,23 +20,20 @@ class Worker {
  #else
   private:
  #endif
-    unsigned int id;
     unsigned int position;
     unsigned int sleeptime; // in ms
+    Presenter* presenter;
     
     MessageBuffer message_buffer;
     bool is_leader{false};
     bool participates_in_election{false};
     bool running{false};
-    Presenter* presenter;
     std::future<bool> previous_message_sent;
 
     // Pointers to all Workers in the Ring, ordered by sending distance
     // The closest Neighbour to which to send Messages is at index 0.
     // Itself is at the last position in the vector.
-    std::vector<Worker*> neighbours{};
-
-    void set_presenter(Presenter* presenter);
+    std::vector<Worker*> colleagues{};
 
     ContinueOperation act_upon_message(Message* message);
     void start_election();
@@ -54,19 +52,18 @@ class Worker {
     void send_to_neighbour(Message* message);
 
   public:
+    const unsigned int id;
+
     Worker(
         unsigned int id, 
         unsigned int position,
         unsigned int sleeptime, // in milliseconds
         Presenter* presenter
-    ): id{id}, 
-       position{position},
-       sleeptime{sleeptime}   
-    {
-        set_presenter(presenter);
-    }
-
-    ~Worker();
+    ): position{position},
+       sleeptime{sleeptime},
+       presenter{presenter},
+       id{id}
+    {}
 
     // Assigns a Message to the Worker's Message Buffer for execution 
     // and blocks until it's taken.

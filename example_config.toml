@@ -12,7 +12,7 @@ sleeptime = 1700        # in milliseconds, default is 5 seconds
     sleeptime = 400     # in milliseconds, default is 500 milliseconds
 
 [log]
-enabled = true          # not necessary when file or level set, default is false
+console = true          # default is false
 file = "test.log"       # default is not set/""
 include_date = false    # default is false
 no_config_log = false   # default is false

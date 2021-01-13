@@ -1,3 +1,4 @@
+#include "presenter.h"
 #ifdef UNIT_TEST
 #include "worker.h"
 
@@ -8,6 +9,8 @@
 
 // sleep is needed since there is another thread
 #define sleep() this_thread::sleep_for(chrono::milliseconds(25))
+
+NoPresenter no_presenter;
 
 using namespace std;
 
@@ -23,8 +26,8 @@ TEST_CASE(
     unsigned int dummy_id{get<0>(ids)};
     unsigned int worker_id{get<1>(ids)};
 
-    Worker dummy_worker(dummy_id, 0, 0, nullptr);
-    Worker worker(worker_id, 0, 0, nullptr);
+    Worker dummy_worker(dummy_id, 0, 0, &no_presenter);
+    Worker worker(worker_id, 0, 0, &no_presenter);
     worker.set_neighbours({&dummy_worker});
 
     thread worker_thread{ref(worker)};
@@ -148,8 +151,8 @@ TEST_CASE(
     unsigned int number_of_workers{GENERATE(12u, 15u)};
     unsigned int worker_position{GENERATE(0u, 1u, 4u, 11u)};
 
-    Worker dummy_worker(0, 0, 0, nullptr);
-    Worker worker(0, worker_position, 0, nullptr);
+    Worker dummy_worker(0, 0, 0, &no_presenter);
+    Worker worker(0, worker_position, 0, &no_presenter);
     
     vector<Worker*> neighbours{};
     neighbours.assign(number_of_workers, &dummy_worker);
@@ -171,7 +174,7 @@ TEST_CASE(
         worker.assign_message_and_wait(new DeadWorker(dead_worker_position));
         sleep();
 
-        CHECK(worker.neighbours.size() == number_of_workers - 1);
+        CHECK(worker.colleagues.size() == number_of_workers - 1);
         CHECK(worker.position == expected_worker_position);
         REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
@@ -191,13 +194,13 @@ TEST_CASE(
         worker.assign_message_and_wait(new DeadWorker(neighbour_position));
         sleep();
 
-        CHECK(worker.neighbours.size() == number_of_workers);
+        CHECK(worker.colleagues.size() == number_of_workers);
         CHECK(worker.position == expected_worker_position);
         CHECK(dummy_worker.message_buffer.is_empty());
     }
 
     SECTION("Worker is able to add a new worker to its neighbours on correct index") {
-        Worker other_worker(1, 0, 0, nullptr);
+        Worker other_worker(1, 0, 0, &no_presenter);
         unsigned int new_worker_position{GENERATE(3u, 9u)};
         unsigned int expected_new_worker_index{
             worker.get_neighbours_index_for_position(new_worker_position)
@@ -212,8 +215,8 @@ TEST_CASE(
         );
         sleep();
 
-        CHECK(worker.neighbours.size() == number_of_workers + 1);
-        CHECK(worker.neighbours[expected_new_worker_index]->id == other_worker.id);
+        CHECK(worker.colleagues.size() == number_of_workers + 1);
+        CHECK(worker.colleagues[expected_new_worker_index]->id == other_worker.id);
         CHECK(worker.position == expected_worker_position);
         REQUIRE_FALSE(dummy_worker.message_buffer.is_empty());
 
@@ -240,7 +243,7 @@ TEST_CASE(
     unsigned int number_of_workers{12};
     unsigned int worker_position{3};
 
-    Worker worker(0, worker_position, 0, nullptr);
+    Worker worker(0, worker_position, 0, &no_presenter);
     
     vector<Worker*> neighbours{};
     neighbours.assign(number_of_workers, &worker);

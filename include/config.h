@@ -1,8 +1,9 @@
 #pragma once
 
-#include "presenters/presenter.h"
+#include "concrete_presenter.h"
 
 #include <spdlog/spdlog.h>
+
 
 // All configurable values and values resulting from the configuration
 struct Config {
@@ -11,12 +12,13 @@ struct Config {
     unsigned int number_of_elections{0};
     unsigned int after_election_sleeptime{5000};
     unsigned int worker_sleeptime{500};
-    bool logging_enabled{false};
+    bool log_to_console{false};
     std::string log_file_name{""};
     bool log_date{false};
-    spdlog::level::level_enum logging_level{spdlog::level::off};
+    spdlog::level::level_enum general_logging_level{spdlog::level::info};
+    spdlog::level::level_enum console_logging_level{spdlog::level::off};
+    spdlog::level::level_enum file_logging_level{spdlog::level::off};
     bool no_config_log{false};
-    bool is_file_logger{};
     bool use_command_line{false};
 
     operator std::string() const;
@@ -37,4 +39,6 @@ struct ConfigExit {
 };
 
 ConfigExit configure(int argc, char* argv[], Config& config);
-Presenter* get_and_start_presenter(const Config& config);
+
+std::shared_ptr<spdlog::logger> get_and_start_file_logger(const Config& config);
+std::shared_ptr<spdlog::logger> get_console_logger(const Config& config);

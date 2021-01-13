@@ -1,6 +1,6 @@
 #include "worker.h"
-#include "messages.h"
-#include "presenters/no_presenter.h"
+#include "message.h"
+#include "presenter.h"
 
 #include <spdlog/spdlog.h>
 #include <chrono>
@@ -28,37 +28,21 @@ void Worker::assign_message(Message* message) {
 
 void Worker::set_neighbours(vector<Worker*> neighbours) {
     if (neighbours.size() > 0) {
-        this->neighbours = neighbours;
+        this->colleagues = neighbours;
     }
     else {
-        throw invalid_argument("There must be at least on neighbour to which to send.");
+        throw invalid_argument(
+            "There must be at least on neighbour to which to send."
+        );
     }
-}
-
-void Worker::set_presenter(Presenter* presenter) {
-    // sets the presenter of the worker to the given presenter 
-    // when it's not a null pointer,
-    // otherwise it's set to no presenter
-    this->presenter = 
-        presenter
-        ? presenter
-        : new NoPresenter();
 }
 
 bool Worker::is_running() const {
     return running;
 }
 
-Worker::~Worker() {
-    // if the presenter of the worker is no presenter it needs to be deleted
-    NoPresenter* no_presenter{dynamic_cast<NoPresenter*>(presenter)};
-    if (no_presenter) {
-        delete no_presenter;
-    }
-}
-
 void Worker::operator()() {
-    if (neighbours.size() > 0) {
+    if (colleagues.size() > 0) {
         running = true;
 
         bool continue_operation{true};
@@ -74,11 +58,13 @@ void Worker::operator()() {
 ContinueOperation Worker::act_upon_message(Message* message) {
     ContinueOperation continue_operation{true};
 
-    presenter->worker_got_message(id, message);
+    presenter->show(CreateEvent::got_message(id, message));
 
     switch (message->type) {
         case MessageType::LogMessage:
-            presenter->worker_says(id, message->cast_to<LogMessage>()->content);
+            presenter->show(
+                CreateEvent::says(id, message->cast_to<LogMessage>()->content)
+            );
             break;
         case MessageType::StartElection:
             start_election();
@@ -108,9 +94,9 @@ ContinueOperation Worker::act_upon_message(Message* message) {
 }
 
 void Worker::start_election() {
-    presenter->worker_starts_election(id);
+    presenter->show(CreateEvent::election_started(id));
 
-    presenter->worker_participates_in_election(id);
+    presenter->show(CreateEvent::participates(id));
     participates_in_election = true;
 
     propose_oneself();
@@ -118,7 +104,7 @@ void Worker::start_election() {
 
 void Worker::participate_in_election(ElectionProposal* proposal) {
     if (is_leader) {
-        presenter->worker_resigns_as_leader(id);
+        presenter->show(CreateEvent::resigned(id));
         is_leader = false;
     }
 
@@ -126,7 +112,7 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 
     if (!participates_in_election) {
         participates_in_election = true;
-        presenter->worker_participates_in_election(id);
+        presenter->show(CreateEvent::participates(id));
     }
 
     if (proposal->id > id) {
@@ -137,7 +123,7 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
     }
     else {
         if (already_participated_in_election) {
-            presenter->worker_discards_election_proposal(id, proposal->id);
+            presenter->show(CreateEvent::proposal_discarded(id, proposal->id));
         }
         else {
             propose_oneself();
@@ -146,31 +132,31 @@ void Worker::participate_in_election(ElectionProposal* proposal) {
 }
 
 void Worker::forward_election_proposal(ElectionProposal* proposal) {
-    presenter->worker_forwards_election_proposal(id, proposal->id);
+    presenter->show(CreateEvent::proposal_forwarded(id, proposal->id));
     send_to_neighbour(new ElectionProposal(*proposal));
 }
 
 void Worker::be_elected() {
-    presenter->worker_is_elected(id);
+    presenter->show(CreateEvent::is_elected(id));
     is_leader = true;
 
-    presenter->worker_stops_election_participation(id);
+    presenter->show(CreateEvent::participation_stopped(id));
     participates_in_election = false;
 
     send_to_neighbour(new Elected(id));
 }
 
 void Worker::propose_oneself() {
-    presenter->worker_proposes_itself_in_election(id);
+    presenter->show(CreateEvent::proposed_themselves(id));
     send_to_neighbour(new ElectionProposal(id));
 }
 
 void Worker::end_election(Elected* elected) {
     if (elected->id == id) {
-        presenter->election_is_finished(id);
+        presenter->show(CreateEvent::election_finished(id));
     }
     else {
-        presenter->worker_stops_election_participation(id);
+        presenter->show(CreateEvent::participation_stopped(id));
         participates_in_election = false;
 
         send_to_neighbour(new Elected(elected->id));
@@ -192,11 +178,13 @@ void Worker::add_new_worker(NewWorker* new_worker) {
         get_neighbours_index_for_position(new_worker->position)
     };
 
-    if (*neighbours[new_neighbour_index] != *new_worker->worker) {
-        presenter->worker_adds_neighbour(id, new_worker->position);
+    if (*colleagues[new_neighbour_index] != *new_worker->worker) {
+        presenter->show(
+            CreateEvent::colleague_added(id, new_worker->worker->id)
+        );
 
-        neighbours.insert(
-            neighbours.begin() + new_neighbour_index, 
+        colleagues.insert(
+            colleagues.begin() + new_neighbour_index, 
             new_worker->worker
         );
 
@@ -216,23 +204,30 @@ void Worker::send_to_neighbour(Message* message) {
         // previous message still hasn't been retrieved by neighbour,
         // neighbour is considered dead
         unsigned int neighbour_position{get_direct_neighbour_position()};
-        presenter->worker_recognizes_dead_neighbour(id, neighbour_position);
+        presenter->show(
+            CreateEvent::dead_neighbour_recognized(
+                id, 
+                colleagues[neighbour_position]->id
+            )
+        );
         remove_dead_worker(neighbour_position);
     }
 
     previous_message_sent = async(
         launch::async,
         [message{message}, this](){ 
-            return neighbours[0]->assign_message_and_wait(message); 
+            return colleagues[0]->assign_message_and_wait(message); 
         }
     );
 }
 
 void Worker::remove_dead_worker(unsigned int position) {
-    presenter->worker_removes_neighbour(id, position);
+    presenter->show(
+        CreateEvent::colleague_removed(id, colleagues[position]->id)
+    );
 
-    neighbours.erase(
-        neighbours.begin() 
+    colleagues.erase(
+        colleagues.begin() 
             + 
         get_neighbours_index_for_position(position)
     );
@@ -245,7 +240,7 @@ void Worker::remove_dead_worker(unsigned int position) {
 }
 
 unsigned int Worker::get_direct_neighbour_position() {
-    return (position + 1) % neighbours.size();
+    return (position + 1) % colleagues.size();
 }
 
 unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
@@ -253,7 +248,7 @@ unsigned int Worker::get_neighbours_index_for_position(unsigned int position) {
         return position - this->position - 1;
     }
     else {
-        return position - this->position - 1 + neighbours.size();
+        return position - this->position - 1 + colleagues.size();
     }
 }
 

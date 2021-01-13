@@ -39,15 +39,16 @@ src = [
     'src/worker.cpp', 
     'src/ring.cpp',
     'src/config.cpp',
-    'src/presenters/logger.cpp',
-    'src/presenters/console_writer.cpp',
-    'src/presenters/command_line.cpp'
+    'src/event.cpp',
+    'src/concrete_presenter/command_line.cpp',
+    'src/concrete_presenter/executor.cpp',
+    'src/concrete_presenter/presenter.cpp'
 ]
 
 unit_tests_src = [
     'src/unit_tests/main.cpp',
-    'src/unit_tests/worker_tests.cpp',
-    'src/unit_tests/message_buffer_tests.cpp'
+    'src/unit_tests/worker.cpp',
+    'src/unit_tests/message_buffer.cpp'
 ]
 
 executable('ring_voting',

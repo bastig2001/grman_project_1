@@ -1,9 +1,10 @@
 #pragma once
 
-#include "messages.h"
+#include "message.h"
 
 #include <condition_variable>
 #include <mutex>
+
 
 // A Message Buffer, which holds at most one element, 
 // meant for Communication between Workers.

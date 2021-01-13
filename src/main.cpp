@@ -1,13 +1,15 @@
+#include "concrete_presenter.h"
 #include "ring.h"
 #include "config.h"
-#include "presenters/command_line.h"
+#include "presenter.h"
+#include "spdlog/common.h"
 
 #include <thread>
 #include <chrono>
 
 using namespace std;
 
-void run_ring(const Config&, Presenter*);
+void run(const Config&);
 void cycle(Ring&, chrono::milliseconds);
 
 
@@ -19,28 +21,35 @@ int main(int argc, char* argv[]) {
         return config_exit.exit_code;
     }    
 
-    Presenter* presenter = get_and_start_presenter(config);
-    
-    run_ring(config, presenter);
-
-    delete presenter;
+    run(config);
 }
 
 
-void run_ring(const Config& config, Presenter* presenter) {
-    Ring ring(config.number_of_workers, config.worker_sleeptime, presenter);
+void run(const Config& config) {
+    ConcretePresenter presenter(
+        get_console_logger(config), 
+        get_and_start_file_logger(config)
+    );
 
-    auto command_line{dynamic_cast<CommandLine*>(presenter)};
-    if (command_line) {
-        command_line->set_ring(&ring);
-        command_line->start();
+    if (!config.no_config_log) {
+        presenter.log(
+            spdlog::level::debug, 
+            "The configuration looks as follows:\n" + (string)config
+        );
+    }
+
+    Ring ring(config.number_of_workers, config.worker_sleeptime, &presenter);
+
+    if (config.use_command_line) {
+        presenter.set_ring(&ring);
+        presenter.start_command_line();
     }
 
     ring.start();
     
     chrono::milliseconds sleeptime{config.after_election_sleeptime};
     
-    if (config.number_of_elections > 0 || command_line) {
+    if (config.number_of_elections > 0 || config.use_command_line) {
         for (unsigned int i{0}; i < config.number_of_elections; i++) {
             cycle(ring, sleeptime);
         }
@@ -51,10 +60,7 @@ void run_ring(const Config& config, Presenter* presenter) {
         }
     }
 
-    if (command_line) {
-        command_line->wait();
-        command_line->stop();
-    }
+    presenter.wait_for_exit();
 
     ring.stop();
 }
