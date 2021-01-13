@@ -56,5 +56,6 @@ executable('unit_tests',
            sources : unit_tests_src + src,
            include_directories : inc_dir,
            dependencies : [thread_dep],
-           cpp_args: '-DUNIT_TEST -I' + get_option('catch2_include_dir')
+           cpp_args: ['-DUNIT_TEST', 
+                      '-I' + get_option('catch2_include_dir')]
           )
