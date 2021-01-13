@@ -3,6 +3,7 @@
 #include "worker.h"
 #include "presenter.h"
 
+#include <tuple>
 #include <vector>
 #include <thread>
 
@@ -41,6 +42,10 @@ class Ring {
     //      according to the Chang and Roberts Algorithm,
     // returns true if the election was started successfully
     bool start_election_at_position(unsigned int worker_position);
+
+    // returns a vector with the id, position and status of each worker
+    std::vector<std::tuple<unsigned int, unsigned int, std::string>> 
+        get_worker_list();
 
     // stops all Workers and joins their threads
     void stop();

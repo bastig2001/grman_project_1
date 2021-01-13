@@ -1,6 +1,7 @@
 #include "concrete_presenter.h"
 
 #include <sstream>
+#include <string>
 
 using namespace std;
 using namespace peg;
@@ -66,7 +67,21 @@ void ConcretePresenter::print_help() {
 }
 
 void ConcretePresenter::list_workers() {
-    println("List");
+    auto list{ring->get_worker_list()};
+    ostringstream output{};
+
+    output << "Workers:\n";
+    for (auto triple : list) {
+        unsigned int id{get<0>(triple)};
+        unsigned int position{get<1>(triple)};
+        string status{get<2>(triple)};
+
+        output << "  Position " << to_string(position) 
+               << ": Worker " << to_string(id) 
+               << ", Status: " << status << "\n"; 
+    }
+
+    println(output.str());
 }
 
 void ConcretePresenter::start_election(const SemanticValues& values) {

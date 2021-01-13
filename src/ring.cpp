@@ -107,6 +107,23 @@ bool Ring::start_election_at_position(unsigned int worker_position) {
     }
 }
 
+vector<tuple<unsigned int, unsigned int, string>> Ring::get_worker_list() {
+    vector<tuple<unsigned int, unsigned int, string>> list{};
+    list.reserve(workers.size());
+
+    for (unsigned int i{0}; i < workers.size(); i++) {
+        unsigned int id{workers[i]->id};
+        unsigned int position{i};
+        const string& status{workers[i]->is_running() ? "running" : "stopped"};
+
+        list.push_back(tuple<unsigned int, unsigned int, string>{
+            id, position, status
+        });
+    }
+
+    return list;
+}
+
 void Ring::stop() {
     presenter->show(CreateEvent::ring_stops());
 
